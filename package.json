@@ -1,0 +1,121 @@
+{
+  "name": "realm-vscode",
+  "displayName": "Realm Explorer",
+  "description": "Inspect and query local Realm database files directly in VS Code with advanced filtering and visualization.",
+  "version": "0.2.0",
+  "publisher": "ishwardatt",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Data Science",
+    "Visualization"
+  ],
+  "keywords": [
+    "realm",
+    "database",
+    "mongodb",
+    "query",
+    "explorer",
+    "rql",
+    "data"
+  ],
+  "activationEvents": [
+    "onView:realm-schema"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "realm-explorer",
+          "title": "Realm",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "realm-explorer": [
+        {
+          "id": "realm-schema",
+          "name": "Schema Explorer",
+          "type": "tree"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "realm.openFile",
+        "title": "Open Realm File",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "realm.runQuery",
+        "title": "Run Realm Query",
+        "icon": "$(play)"
+      },
+      {
+        "command": "realm.refreshSchema",
+        "title": "Refresh Schema",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "realm-schema",
+        "contents": "No Realm database open.\n[Open Realm File](command:realm.openFile)\nOpen a .realm file to explore its schema and query data."
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "realm.openFile",
+          "when": "view == realm-schema",
+          "group": "navigation"
+        },
+        {
+          "command": "realm.runQuery",
+          "when": "view == realm-schema",
+          "group": "navigation"
+        },
+        {
+          "command": "realm.refreshSchema",
+          "when": "view == realm-schema",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "npm run compile:extension && npm run build:ui",
+    "compile:extension": "tsc -p ./",
+    "build:ui": "vite build",
+    "watch": "concurrently \"npm run watch:extension\" \"npm run watch:ui\"",
+    "watch:extension": "tsc -watch -p ./",
+    "watch:ui": "vite build --watch",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.5",
+    "@types/node": "^25.6.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vscode/test-electron": "^2.3.3",
+    "concurrently": "^9.2.1",
+    "eslint": "^8.45.0",
+    "preact": "^10.29.1",
+    "rollup-plugin-visualizer": "^7.0.1",
+    "terser": "^5.46.2",
+    "typescript": "^5.1.6",
+    "vite": "^8.0.10"
+  },
+  "dependencies": {
+    "realm": "^20.2.0"
+  }
+}
