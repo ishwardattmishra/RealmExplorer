@@ -35,6 +35,7 @@ export class RealmBackend {
 
       return this.getSchema();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to open Realm:', error);
       throw error;
     }
@@ -70,6 +71,7 @@ export class RealmBackend {
         };
       });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error reading schema:', error);
       return [];
     }
@@ -107,6 +109,7 @@ export class RealmBackend {
 
       return results;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`Error filtering objects of type ${objectType}:`, error);
       throw error;
     }
@@ -146,6 +149,7 @@ export class RealmBackend {
         executionTimeMs: Date.now() - startTime,
       };
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Query execution failed:', error);
       throw error;
     }
@@ -164,6 +168,7 @@ export class RealmBackend {
         executionTimeMs: Date.now() - startTime,
       };
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Count query failed:', error);
       throw error;
     }
@@ -174,6 +179,7 @@ export class RealmBackend {
       try {
         this.realm.close();
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error closing Realm:', error);
       } finally {
         this.realm = null;

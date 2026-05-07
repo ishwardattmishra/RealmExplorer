@@ -6,8 +6,8 @@ interface DataTableProps {
     results: QueryResult | null;
     visibleKeys: string[];
     currentSchema?: RealmSchemaInfo;
-    selectedRow: any | null;
-    onSelectRow: (row: any) => void;
+    selectedRow: Record<string, any> | null;
+    onSelectRow: (row: Record<string, any>) => void;
     loading: boolean;
     error: string | null;
 }
@@ -36,22 +36,25 @@ export const DataTable: React.FC<DataTableProps> = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {results.data.map((row, i) => (
-                            <tr 
-                                key={i} 
-                                className={selectedRow === row ? 'selected' : ''}
-                                onClick={() => onSelectRow(row)}
-                            >
-                                {visibleKeys.map((key, j) => (
-                                    <td key={j}>
-                                        <SmartCell 
-                                            value={row[key]} 
-                                            typeInfo={currentSchema?.properties[key]} 
-                                        />
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
+                        {results.data.map((row, i) => {
+                            const rowKey = (currentSchema?.primaryKey && row[currentSchema.primaryKey]) || i;
+                            return (
+                                <tr 
+                                    key={rowKey} 
+                                    className={selectedRow === row ? 'selected' : ''}
+                                    onClick={() => onSelectRow(row)}
+                                >
+                                    {visibleKeys.map((key) => (
+                                        <td key={key}>
+                                            <SmartCell 
+                                                value={row[key]} 
+                                                typeInfo={currentSchema?.properties[key]} 
+                                            />
+                                        </td>
+                                    ))}
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             ) : results && !loading && (

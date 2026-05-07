@@ -12,15 +12,15 @@ import { RealmSchemaInfo, FilterRow, TabType } from './types';
 
 const App: React.FC = () => {
     // Shared State
-    const [schema, setSchema] = useState<RealmSchemaInfo[]>((window as any).INITIAL_SCHEMA || []);
-    const [objectType, setObjectType] = useState<string>((window as any).INITIAL_TYPE || '');
+    const [schema, setSchema] = useState<RealmSchemaInfo[]>((globalThis as any).INITIAL_SCHEMA || []);
+    const [objectType, setObjectType] = useState<string>((globalThis as any).INITIAL_TYPE || '');
     const [pageSize, setPageSize] = useState<number>(20);
     const [limit, setLimit] = useState<number>(1000);
     const [activeTab, setActiveTab] = useState<TabType>('visual');
     const [rqlFilter, setRqlFilter] = useState<string>('');
     const [visualFilters, setVisualFilters] = useState<FilterRow[]>([]);
     const [currentPage, setCurrentPage] = useState<number>(1);
-    const [selectedRow, setSelectedRow] = useState<any | null>(null);
+    const [selectedRow, setSelectedRow] = useState<Record<string, any> | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
     const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
 

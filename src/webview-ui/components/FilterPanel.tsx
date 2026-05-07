@@ -37,18 +37,20 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     return (
         <section className="filter-section">
             <div className="tab-container">
-                <div 
+                <button 
+                    type="button"
                     className={`tab-item ${activeTab === 'visual' ? 'active' : ''}`} 
                     onClick={() => onTabChange('visual')}
                 >
                     Visual Filter
-                </div>
-                <div 
+                </button>
+                <button 
+                    type="button"
                     className={`tab-item ${activeTab === 'rql' ? 'active' : ''}`} 
                     onClick={() => onTabChange('rql')}
                 >
                     Raw RQL
-                </div>
+                </button>
             </div>
 
             {activeTab === 'visual' ? (
@@ -63,7 +65,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                                 {index > 0 ? (
                                     <select 
                                         value={row.logic} 
-                                        onChange={(e) => updateFilterRow(row.id, { logic: e.target.value })}
+                                        onChange={(e) => updateFilterRow(row.id, { logic: (e.target as HTMLSelectElement).value })}
                                     >
                                         <option value="AND">AND</option>
                                         <option value="OR">OR</option>
@@ -73,7 +75,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                                 )}
                                 <select 
                                     value={row.field} 
-                                    onChange={(e) => updateFilterRow(row.id, { field: e.target.value })}
+                                    onChange={(e) => updateFilterRow(row.id, { field: (e.target as HTMLSelectElement).value })}
                                 >
                                     <option value="">Select field...</option>
                                     {currentSchema && Object.keys(currentSchema.properties).map(p => (
@@ -82,7 +84,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                                 </select>
                                 <select 
                                     value={row.operator} 
-                                    onChange={(e) => updateFilterRow(row.id, { operator: e.target.value })}
+                                    onChange={(e) => updateFilterRow(row.id, { operator: (e.target as HTMLSelectElement).value })}
                                 >
                                     {operators.map(o => <option key={o} value={o}>{o}</option>)}
                                 </select>
@@ -90,7 +92,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                                     type="text" 
                                     placeholder="Value" 
                                     value={row.value} 
-                                    onChange={(e) => updateFilterRow(row.id, { value: e.target.value })} 
+                                    onChange={(e) => updateFilterRow(row.id, { value: (e.target as HTMLInputElement).value })} 
                                 />
                                 {index === 0 && <button className="mini-btn" onClick={onAddFilterRow}>+ Add Row</button>}
                                 {index > 0 && <button className="mini-btn" onClick={() => removeFilterRow(row.id)}>✕</button>}
@@ -103,7 +105,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                     className="rql-input"
                     placeholder="e.g. age > 21 AND name CONTAINS 'John'"
                     value={rqlFilter}
-                    onChange={(e) => onRqlFilterChange(e.target.value)}
+                    onChange={(e) => onRqlFilterChange((e.target as HTMLTextAreaElement).value)}
                 />
             )}
         </section>
