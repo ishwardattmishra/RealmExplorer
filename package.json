@@ -2,8 +2,14 @@
   "name": "realm-vscode",
   "displayName": "Realm Explorer",
   "description": "Inspect and query local Realm database files directly in VS Code with advanced filtering and visualization.",
-  "version": "0.2.0",
-  "publisher": "ishwardatt",
+  "version": "0.2.3",
+  "icon": "media/logo.png",
+  "publisher": "IshwarDattMishra",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ishwardattmishra/RealmExplorer"
+  },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -97,23 +103,32 @@
     "watch:ui": "vite build --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "test:unit": "vitest run",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.5",
+    "@testing-library/preact": "^3.2.4",
     "@types/node": "^25.6.0",
     "@types/vscode": "^1.80.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-istanbul": "^4.1.5",
+    "@vitest/coverage-v8": "^4.1.5",
     "@vscode/test-electron": "^2.3.3",
     "concurrently": "^9.2.1",
+    "esbuild": "^0.28.0",
     "eslint": "^8.45.0",
+    "husky": "^9.1.7",
+    "jsdom": "^29.1.1",
     "preact": "^10.29.1",
     "rollup-plugin-visualizer": "^7.0.1",
     "terser": "^5.46.2",
     "typescript": "^5.1.6",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
   },
   "dependencies": {
     "realm": "^20.2.0"

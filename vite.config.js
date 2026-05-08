@@ -4,7 +4,10 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [
-    preact(),
+    preact({
+      devToolsEnabled: false,
+      prefreshEnabled: false,
+    }),
   ],
   build: {
     outDir: 'out/webview-ui',
@@ -32,6 +35,23 @@ export default defineConfig({
       'react': 'preact/compat',
       'react-dom': 'preact/compat',
       'react/jsx-runtime': 'preact/jsx-runtime',
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    coverage: {
+      provider: 'istanbul',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/webview-ui/**/*'],
+      exclude: [
+        'src/webview-ui/**/*.test.ts',
+        'src/webview-ui/**/*.test.tsx',
+        'src/webview-ui/index.tsx',
+        'src/webview-ui/**/*.html',
+        'src/webview-ui/**/*.json',
+        'src/webview-ui/**/*.css',
+      ],
     },
   },
 });
