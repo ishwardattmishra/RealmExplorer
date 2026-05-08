@@ -39,6 +39,11 @@ export const Header: React.FC<HeaderProps> = ({
     return (
         <header className="main-header">
             <div className="title-section">
+                <img 
+                    src={(globalThis as any).LOGO_URI} 
+                    alt="Logo" 
+                    style={{ width: '24px', height: '24px', borderRadius: '4px' }} 
+                />
                 <h2>Realm Explorer</h2>
                 {results && <span className="count-badge">{results.totalCount} objects</span>}
             </div>

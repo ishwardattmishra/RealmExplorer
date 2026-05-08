@@ -125,6 +125,9 @@ export class RealmPanel {
         const styleUri = webview.asWebviewUri(vscode.Uri.file(
             path.join(this._extensionUri.fsPath, 'out', 'webview-ui', 'main.css')
         ));
+        const logoUri = webview.asWebviewUri(vscode.Uri.file(
+            path.join(this._extensionUri.fsPath, 'media', 'logo.png')
+        ));
 
         return `<!DOCTYPE html>
 <html lang="en">
@@ -139,6 +142,7 @@ export class RealmPanel {
     <script>
         window.INITIAL_SCHEMA = ${schemaJson};
         window.INITIAL_TYPE = ${JSON.stringify(initialObjectType || '')};
+        window.LOGO_URI = "${logoUri}";
     </script>
     <script type="module" src="${scriptUri}"></script>
 </body>
