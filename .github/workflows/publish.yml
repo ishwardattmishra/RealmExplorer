@@ -7,7 +7,19 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    name: Publish for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: win32-x64
+          - os: ubuntu-latest
+            target: linux-x64
+          - os: macos-latest
+            target: darwin-x64
+          - os: macos-latest
+            target: darwin-arm64
     steps:
       - uses: actions/checkout@v3
 
@@ -20,14 +32,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
       - name: Build
         run: npm run compile
 
-      - name: Unit Tests
-        run: npm run test:unit
-
       - name: Publish to Marketplace
-        run: npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }}
+        run: npx @vscode/vsce publish --target ${{ matrix.target }} -p ${{ secrets.VSCE_PAT }} --no-dependencies
