@@ -1,10 +1,16 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
+
 import { RealmBackend } from './services/realm-backend';
 import { RealmPanel } from './webview/RealmPanel';
 import { RealmSchemaProvider } from './providers/SchemaProvider';
+import { Logger } from './services/logger';
 
 export function activate(context: vscode.ExtensionContext) {
+    Logger.initialize(context);
+    Logger.info('Realm Explorer extension activating...');
+
     const realmBackend = new RealmBackend();
     const schemaProvider = new RealmSchemaProvider(realmBackend);
     
@@ -53,6 +59,18 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
             RealmPanel.createOrShow(context.extensionUri, realmBackend, objectType);
+        }),
+
+        vscode.commands.registerCommand('realm.showLogs', () => {
+            Logger.showOutput();
+            const logPath = Logger.getLogPath();
+            if (logPath && fs.existsSync(logPath)) {
+                vscode.workspace.openTextDocument(logPath).then(doc => {
+                    vscode.window.showTextDocument(doc);
+                });
+            } else {
+                vscode.window.showInformationMessage('Log file not found or not yet created.');
+            }
         })
     );
 }

@@ -5,11 +5,13 @@ Inspect and query local Realm database files directly within VS Code with a powe
 ## Features
 
 ### 🗂️ Schema Explorer
+
 - View all object types in your Realm database
 - Expand object types to see their properties and types
 - Quick refresh to reload schema changes
 
 ### 🔍 Advanced Query Interface
+
 - **Visual Filter Builder**: Create filters using a user-friendly interface
   - Multiple filter conditions with AND/OR logic
   - Support for all comparison operators (equals, greater than, contains, etc.)
@@ -18,12 +20,14 @@ Inspect and query local Realm database files directly within VS Code with a powe
 - **Tabbed Interface**: Switch between visual and RQL modes seamlessly
 
 ### 📊 Query Execution
+
 - **Run Query**: Execute queries and view paginated results
 - **Count Only**: Get record counts without fetching data (faster for large datasets)
 - **Smart Pagination**: Navigate through large result sets with page controls
 - **Configurable Page Size**: Choose between 20, 50, 100, or 500 records per page
 
 ### 📈 Results Display
+
 - **Sortable Columns**: Click column headers to sort results ascending/descending
 - **Rich Table View**: Clean, responsive table with proper VSCode theme integration
 - **Object Rendering**: Nested objects displayed as formatted JSON
@@ -31,11 +35,13 @@ Inspect and query local Realm database files directly within VS Code with a powe
 - **Performance Metrics**: View execution time and record counts
 
 ### 💾 Data Export
+
 - Export query results to JSON files
 - Includes all fetched records with proper formatting
 - Timestamped filenames for easy organization
 
 ### 🎨 Modern UI
+
 - Native VSCode theme integration (dark/light mode support)
 - Responsive design that adapts to different panel sizes
 - Loading states and error handling
@@ -53,8 +59,9 @@ Inspect and query local Realm database files directly within VS Code with a powe
 5. Query your data:
    - Click the **Run Realm Query** button (play icon) or use the command palette
    - Choose an object type from the dropdown
-   
+
 ### Visual Filter Builder
+
 1. Select the "Visual Filter" tab
 2. Choose a field from the dropdown
 3. Select an operator (equals, contains, greater than, etc.)
@@ -63,11 +70,15 @@ Inspect and query local Realm database files directly within VS Code with a powe
 6. Click "▶ Run Query" to execute
 
 ### Raw RQL Mode
+
 1. Select the "Raw RQL" tab
 2. Write your filter expression (e.g., `age > 20 AND name BEGINSWITH 'J'`)
 3. Click "▶ Run Query" to execute
 
+![alt text](image.png)
+
 ### Additional Features
+
 - **# Count Only**: Get quick count without fetching data
 - **Clear Results**: Reset the results view
 - **📥 Export JSON**: Save results to a JSON file
