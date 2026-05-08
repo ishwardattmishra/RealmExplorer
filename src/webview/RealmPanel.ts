@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { RealmBackend } from '../services/realm-backend';
+import { Logger } from '../services/logger';
+
 
 export class RealmPanel {
     public static currentPanel: RealmPanel | undefined;
@@ -49,6 +51,7 @@ export class RealmPanel {
 
         this._panel.webview.onDidReceiveMessage(
             async message => {
+                Logger.info(`Received message from webview: ${message.command}`, message);
                 switch (message.command) {
                     case 'executeQuery': {
                         try {
@@ -60,9 +63,11 @@ export class RealmPanel {
                                 message.pageSize || 20,
                                 message.limit
                             );
+                            Logger.info(`Query results ready, sending to webview. Records: ${results.data.length}`);
                             this._panel.webview.postMessage({ command: 'results', results });
                         } catch (err) {
                             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+                            Logger.error(`Error executing query: ${errorMessage}`);
                             this._panel.webview.postMessage({ command: 'error', message: errorMessage });
                         }
                         break;
@@ -74,6 +79,7 @@ export class RealmPanel {
                                 message.filter,
                                 message.args || []
                             );
+                            Logger.info(`Count result: ${countResult.count}`);
                             this._panel.webview.postMessage({ 
                                 command: 'count', 
                                 count: countResult.count,
@@ -81,11 +87,13 @@ export class RealmPanel {
                             });
                         } catch (err) {
                             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+                            Logger.error(`Error counting: ${errorMessage}`);
                             this._panel.webview.postMessage({ command: 'error', message: errorMessage });
                         }
                         break;
                     }
                     case 'getSchema': {
+                        Logger.info('Fetching schema for webview');
                         const schema = backend.getSchema();
                         this._panel.webview.postMessage({ command: 'schema', schema });
                         break;

@@ -1,4 +1,8 @@
-import Realm from 'realm';
+import { Realm } from 'realm';
+import { Logger } from './logger';
+
+
+
 
 export interface RealmFieldInfo {
   name: string;
@@ -25,18 +29,22 @@ export class RealmBackend {
   private realm: Realm | null = null;
 
   async openRealm(filePath: string, readOnly = true): Promise<RealmSchemaInfo[]> {
+    Logger.info(`Opening Realm: ${filePath} (readOnly: ${readOnly})`);
     try {
       this.closeRealm();
 
+      Logger.info('Calling Realm.open...');
       this.realm = await Realm.open({
         path: filePath,
         readOnly: readOnly,
       });
+      Logger.info('Realm opened successfully');
 
-      return this.getSchema();
+      const schema = this.getSchema();
+      Logger.info(`Loaded schema with ${schema.length} object types`);
+      return schema;
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to open Realm:', error);
+      Logger.error('Failed to open Realm:', error);
       throw error;
     }
   }
@@ -71,8 +79,7 @@ export class RealmBackend {
         };
       });
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error reading schema:', error);
+      Logger.error('Error reading schema:', error);
       return [];
     }
   }
@@ -109,8 +116,7 @@ export class RealmBackend {
 
       return results;
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(`Error filtering objects of type ${objectType}:`, error);
+      Logger.error(`Error filtering objects of type ${objectType}:`, error);
       throw error;
     }
   }
@@ -123,6 +129,7 @@ export class RealmBackend {
     pageSize: number,
     limit?: number
   ): Promise<QueryResult> {
+    Logger.info(`Executing query on ${objectType}`, { filter, args, page, pageSize, limit });
     const startTime = Date.now();
     
     try {
@@ -130,6 +137,8 @@ export class RealmBackend {
       const totalCount = results.length;
       const startIndex = (page - 1) * pageSize;
       const endIndex = Math.min(startIndex + pageSize, totalCount);
+
+      Logger.info(`Query returned ${totalCount} total records. Fetching page ${page}...`);
 
       const data = [];
       for (let i = startIndex; i < endIndex; i++) {
@@ -141,16 +150,18 @@ export class RealmBackend {
         }
       }
 
+      const executionTimeMs = Date.now() - startTime;
+      Logger.info(`Query completed in ${executionTimeMs}ms`);
+
       return {
         data,
         totalCount,
         page,
         pageSize,
-        executionTimeMs: Date.now() - startTime,
+        executionTimeMs,
       };
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Query execution failed:', error);
+      Logger.error('Query execution failed:', error);
       throw error;
     }
   }
@@ -168,19 +179,18 @@ export class RealmBackend {
         executionTimeMs: Date.now() - startTime,
       };
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Count query failed:', error);
+      Logger.error('Count query failed:', error);
       throw error;
     }
   }
 
   closeRealm(): void {
     if (this.realm && !this.realm.isClosed) {
+      Logger.info('Closing Realm');
       try {
         this.realm.close();
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error closing Realm:', error);
+        Logger.error('Error closing Realm:', error);
       } finally {
         this.realm = null;
       }
