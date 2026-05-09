@@ -3,6 +3,7 @@ import preact from '@preact/preset-vite';
 import path from 'path';
 
 export default defineConfig({
+  root: path.resolve(__dirname, 'src/webview-ui'),
   plugins: [
     preact({
       devToolsEnabled: false,
@@ -10,7 +11,8 @@ export default defineConfig({
     }),
   ],
   build: {
-    outDir: 'out/webview-ui',
+    outDir: path.resolve(__dirname, 'out/webview-ui'),
+    emptyOutDir: true,
     minify: 'terser',
     terserOptions: {
       compress: {
@@ -19,9 +21,7 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'src/webview-ui/index.html'),
-      },
+      input: path.resolve(__dirname, 'src/webview-ui/index.html'),
       output: {
         entryFileNames: `main.js`,
         chunkFileNames: `main.js`,
@@ -31,6 +31,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@shared': path.resolve(__dirname, './src/shared'),
       '@': path.resolve(__dirname, './src/webview-ui'),
       'react': 'preact/compat',
       'react-dom': 'preact/compat',
@@ -40,17 +41,19 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    include: ['**/*.test.ts', '**/*.test.tsx'],
+    exclude: ['**/node_modules/**', 'out/**'],
     coverage: {
       provider: 'istanbul',
       reporter: ['text', 'json', 'html'],
-      include: ['src/webview-ui/**/*'],
+      include: ['**/*'],
       exclude: [
-        'src/webview-ui/**/*.test.ts',
-        'src/webview-ui/**/*.test.tsx',
-        'src/webview-ui/index.tsx',
-        'src/webview-ui/**/*.html',
-        'src/webview-ui/**/*.json',
-        'src/webview-ui/**/*.css',
+        '**/*.test.ts',
+        '**/*.test.tsx',
+        '**/index.tsx',
+        '**/*.html',
+        '**/*.json',
+        '**/*.css',
       ],
     },
   },

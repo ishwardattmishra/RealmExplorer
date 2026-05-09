@@ -1,123 +1,54 @@
-import { Realm } from 'realm';
-import { Logger } from './logger';
+import type { QueryResult, RealmSchemaInfo } from '../shared/types';
+import type { ILogger } from './ilogger';
+import type { IRealmBackend } from './irealm-backend';
+import { createLoggerFacade } from './logger';
+import { QueryExecutor } from './query-executor';
+import { RealmSession } from './realm-session';
+import { mapRealmSchemaToInfo } from './schema-mapper';
+import { TypeCoercer } from './type-coercer';
 
+export type { QueryResult, RealmFieldInfo, RealmSchemaInfo, RealmRow } from '../shared/types';
 
+/**
+ * Facade over session, schema mapping, type coercion, and query execution.
+ */
+export class RealmBackend implements IRealmBackend {
+  private readonly session = new RealmSession();
+  private readonly typeCoercer: TypeCoercer;
+  private readonly queryExecutor: QueryExecutor;
 
-
-export interface RealmFieldInfo {
-  name: string;
-  type: string;
-  optional?: boolean;
-  objectType?: string;
-}
-
-export interface RealmSchemaInfo {
-  name: string;
-  primaryKey?: string;
-  properties: Record<string, RealmFieldInfo>;
-}
-
-export interface QueryResult {
-  data: unknown[];
-  totalCount: number;
-  page: number;
-  pageSize: number;
-  executionTimeMs: number;
-}
-
-export class RealmBackend {
-  private realm: Realm | null = null;
+  constructor(private readonly logger: ILogger = createLoggerFacade()) {
+    this.typeCoercer = new TypeCoercer(this.logger);
+    this.queryExecutor = new QueryExecutor(this.session, this.typeCoercer, this.logger);
+  }
 
   async openRealm(filePath: string, readOnly = true): Promise<RealmSchemaInfo[]> {
-    Logger.info(`Opening Realm: ${filePath} (readOnly: ${readOnly})`);
+    this.logger.info(`Opening Realm: ${filePath} (readOnly: ${readOnly})`);
     try {
-      this.closeRealm();
-
-      Logger.info('Calling Realm.open...');
-      this.realm = await Realm.open({
-        path: filePath,
-        readOnly: readOnly,
-      });
-      Logger.info('Realm opened successfully');
+      this.logger.info('Calling Realm.open...');
+      await this.session.open(filePath, readOnly);
+      this.logger.info('Realm opened successfully');
 
       const schema = this.getSchema();
-      Logger.info(`Loaded schema with ${schema.length} object types`);
+      this.logger.info(`Loaded schema with ${schema.length} object types`);
       return schema;
     } catch (error) {
-      Logger.error('Failed to open Realm:', error);
+      this.logger.error('Failed to open Realm:', error);
       throw error;
     }
   }
 
   getSchema(): RealmSchemaInfo[] {
-    if (!this.realm || this.realm.isClosed) {
-        return [];
-    }
-
-    try {
-      const schema = this.realm.schema;
-      return schema.map((s) => {
-        const properties: Record<string, RealmFieldInfo> = {};
-        
-        for (const [key, value] of Object.entries(s.properties)) {
-          if (typeof value === 'string') {
-            properties[key] = { name: key, type: value };
-          } else {
-            properties[key] = {
-              name: key,
-              type: value.type,
-              optional: value.optional,
-              objectType: value.objectType,
-            };
-          }
-        }
-
-        return {
-          name: s.name,
-          primaryKey: s.primaryKey,
-          properties,
-        };
-      });
-    } catch (error) {
-      Logger.error('Error reading schema:', error);
+    if (!this.session.isOpen()) {
       return [];
     }
-  }
 
-  private getFilteredResults(objectType: string, filter: string, args: unknown[] = [], limit?: number) {
-    if (!this.realm || this.realm.isClosed) {
-      throw new Error('Realm is not open or has been closed.');
-    }
-    
     try {
-      // Process arguments to convert specialized objects back to native types
-      const processedArgs = args.map(arg => {
-        if (arg && typeof arg === 'object' && '$type' in arg && 'value' in arg) {
-          const val = (arg as any).value;
-          switch ((arg as any).$type) {
-            case 'date': return new Date(val);
-            case 'objectid': return new Realm.BSON.ObjectId(val);
-            case 'uuid': return new Realm.BSON.UUID(val);
-            case 'decimal128': return Realm.BSON.Decimal128.fromString(val);
-          }
-        }
-        return arg;
-      });
-
-      let results = this.realm.objects(objectType);
-      if (filter) {
-        results = results.filtered(filter, ...processedArgs);
-      }
-      
-      if (limit !== undefined && limit > 0) {
-        // Apply limit to the results
-        return results.slice(0, limit);
-      }
-
-      return results;
+      const realm = this.session.getRealmOrThrow();
+      return mapRealmSchemaToInfo(realm, this.logger);
     } catch (error) {
-      Logger.error(`Error filtering objects of type ${objectType}:`, error);
-      throw error;
+      this.logger.error('Error reading schema:', error);
+      return [];
     }
   }
 
@@ -129,39 +60,10 @@ export class RealmBackend {
     pageSize: number,
     limit?: number
   ): Promise<QueryResult> {
-    Logger.info(`Executing query on ${objectType}`, { filter, args, page, pageSize, limit });
-    const startTime = Date.now();
-    
     try {
-      const results = this.getFilteredResults(objectType, filter, args, limit);
-      const totalCount = results.length;
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = Math.min(startIndex + pageSize, totalCount);
-
-      Logger.info(`Query returned ${totalCount} total records. Fetching page ${page}...`);
-
-      const data = [];
-      for (let i = startIndex; i < endIndex; i++) {
-        const item = results[i];
-        if (item && typeof item.toJSON === 'function') {
-          data.push(item.toJSON());
-        } else {
-          data.push(item);
-        }
-      }
-
-      const executionTimeMs = Date.now() - startTime;
-      Logger.info(`Query completed in ${executionTimeMs}ms`);
-
-      return {
-        data,
-        totalCount,
-        page,
-        pageSize,
-        executionTimeMs,
-      };
+      return await this.queryExecutor.executeQuery(objectType, filter, args, page, pageSize, limit);
     } catch (error) {
-      Logger.error('Query execution failed:', error);
+      this.logger.error('Query execution failed:', error);
       throw error;
     }
   }
@@ -171,33 +73,27 @@ export class RealmBackend {
     filter: string,
     args: unknown[] = []
   ): Promise<{ count: number; executionTimeMs: number }> {
-    const startTime = Date.now();
     try {
-      const results = this.getFilteredResults(objectType, filter, args);
-      return {
-        count: results.length,
-        executionTimeMs: Date.now() - startTime,
-      };
+      return await this.queryExecutor.countQuery(objectType, filter, args);
     } catch (error) {
-      Logger.error('Count query failed:', error);
+      this.logger.error('Count query failed:', error);
       throw error;
     }
   }
 
   closeRealm(): void {
-    if (this.realm && !this.realm.isClosed) {
-      Logger.info('Closing Realm');
-      try {
-        this.realm.close();
-      } catch (error) {
-        Logger.error('Error closing Realm:', error);
-      } finally {
-        this.realm = null;
-      }
+    if (!this.session.isOpen()) {
+      return;
+    }
+    this.logger.info('Closing Realm');
+    try {
+      this.session.close();
+    } catch (error) {
+      this.logger.error('Error closing Realm:', error);
     }
   }
 
   isOpen(): boolean {
-    return !!this.realm && !this.realm.isClosed;
+    return this.session.isOpen();
   }
 }

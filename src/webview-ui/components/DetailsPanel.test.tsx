@@ -1,8 +1,6 @@
 import { render, fireEvent } from '@testing-library/preact';
 import { DetailsPanel } from './DetailsPanel';
 import { describe, it, expect, vi } from 'vitest';
-import { h } from 'preact';
-
 describe('DetailsPanel', () => {
   const mockRow = { _id: '1', name: 'Test' };
   const mockOnClose = vi.fn();

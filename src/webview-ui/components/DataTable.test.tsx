@@ -1,8 +1,6 @@
 import { render, fireEvent } from '@testing-library/preact';
 import { DataTable } from './DataTable';
 import { describe, it, expect, vi } from 'vitest';
-import { h } from 'preact';
-
 // Mock SmartCell
 vi.mock('./SmartCell', () => ({
   SmartCell: ({ value }: { value: any }) => <span>{String(value)}</span>
@@ -12,10 +10,12 @@ describe('DataTable', () => {
   const mockResults = {
     data: [
       { id: '1', name: 'Alice' },
-      { id: '2', name: 'Bob' }
+      { id: '2', name: 'Bob' },
     ],
     totalCount: 2,
-    executionTimeMs: 5
+    page: 1,
+    pageSize: 20,
+    executionTimeMs: 5,
   };
 
   const defaultProps = {
@@ -46,7 +46,7 @@ describe('DataTable', () => {
   });
 
   it('should show empty state if no results', () => {
-    const emptyResults = { data: [], totalCount: 0, executionTimeMs: 0 };
+    const emptyResults = { data: [], totalCount: 0, page: 1, pageSize: 20, executionTimeMs: 0 };
     const { getByText } = render(<DataTable {...defaultProps} results={emptyResults} />);
     expect(getByText('No results found')).toBeTruthy();
   });

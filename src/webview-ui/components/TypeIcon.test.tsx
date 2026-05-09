@@ -1,8 +1,6 @@
 import { render } from '@testing-library/preact';
 import { TypeIcon } from './TypeIcon';
 import { describe, it, expect } from 'vitest';
-import { h } from 'preact';
-
 describe('TypeIcon', () => {
   const types = [
     { type: 'int', icon: '🔢' },

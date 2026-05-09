@@ -1,8 +1,6 @@
 import { render } from '@testing-library/preact';
 import { SmartCell } from './SmartCell';
 import { describe, it, expect, vi } from 'vitest';
-import { h } from 'preact';
-
 // Mock TypeIcon to avoid rendering issues
 vi.mock('./TypeIcon', () => ({
   TypeIcon: ({ type }: { type: string }) => <span data-testid="type-icon">{type}</span>

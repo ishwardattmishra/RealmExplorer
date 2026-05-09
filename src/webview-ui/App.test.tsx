@@ -1,8 +1,6 @@
 import { render, fireEvent, act } from '@testing-library/preact';
 import App from './App';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { h } from 'preact';
-
 // Mock hooks
 vi.mock('./hooks/useVSCodeMessage', () => ({
   useVSCodeMessage: vi.fn(({ onSelectObjectType, onResults, onError, onSchema }) => {
@@ -62,7 +60,7 @@ describe('App', () => {
 
   it('should execute query when Run Query is clicked', async () => {
     const { getByText } = render(<App />);
-    const runBtn = getByText('▶ Run Query');
+    const runBtn = getByText('Run Query');
     await act(async () => {
         fireEvent.click(runBtn);
     });
@@ -73,13 +71,19 @@ describe('App', () => {
     const { findByText, rerender } = render(<App />);
     
     await act(async () => {
-        (globalThis as any).testHandlers.onResults({ data: [{ id: 1 }], totalCount: 1, executionTimeMs: 10 });
+        (globalThis as any).testHandlers.onResults({
+          data: [{ id: 1 }],
+          totalCount: 1,
+          page: 1,
+          pageSize: 20,
+          executionTimeMs: 10,
+        });
     });
     
     // Rerender to ensure state update is reflected in props of subcomponents
     rerender(<App />);
 
-    const exportBtn = await findByText('📥 Export JSON');
+    const exportBtn = await findByText('Export JSON');
     await act(async () => {
         fireEvent.click(exportBtn);
     });

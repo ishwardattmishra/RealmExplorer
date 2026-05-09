@@ -20,6 +20,8 @@
     "node_modules",
     ".vscode-test",
     "vite.config.ts",
-    "src/webview-ui"
+    "vitest.extension.config.ts",
+    "src/webview-ui",
+    "**/*.host.test.ts"
   ]
 }

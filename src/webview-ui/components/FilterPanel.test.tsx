@@ -1,8 +1,6 @@
 import { render, fireEvent, act } from '@testing-library/preact';
 import { FilterPanel } from './FilterPanel';
 import { describe, it, expect, vi } from 'vitest';
-import { h } from 'preact';
-
 describe('FilterPanel', () => {
   const mockSchema = {
     name: 'User',
