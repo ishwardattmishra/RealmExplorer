@@ -47,8 +47,13 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx @vscode/vsce publish --target "${{ matrix.target }}" --no-dependencies
 
+      # package.json publisher stays IshwarDattMishra for VS Marketplace (vsce above).
+      # Open VSX uses a separate namespace (default ishwardattmishra); override with repo variable OPEN_VSX_PUBLISHER.
       - name: Publish to Open VSX
         shell: bash
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: npx ovsx -p "$OVSX_PAT" publish --target "${{ matrix.target }}" --no-dependencies
+          OPEN_VSX_PUBLISHER: ${{ vars.OPEN_VSX_PUBLISHER }}
+        run: |
+          node scripts/set-openvsx-publisher.js
+          npx ovsx -p "$OVSX_PAT" publish --target "${{ matrix.target }}" --no-dependencies
