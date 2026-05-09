@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/preact';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { useVSCodeMessage } from './useVSCodeMessage';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 describe('useVSCodeMessage', () => {
   const handlers = {
@@ -22,9 +23,9 @@ describe('useVSCodeMessage', () => {
 
   it('should call onSelectObjectType when selectObjectType command is received', () => {
     renderHook(() => useVSCodeMessage(handlers));
-    
+
     const messageEvent = new MessageEvent('message', {
-      data: { command: 'selectObjectType', objectType: 'User' }
+      data: { command: 'selectObjectType', objectType: 'User' },
     });
     window.dispatchEvent(messageEvent);
 
@@ -33,10 +34,16 @@ describe('useVSCodeMessage', () => {
 
   it('should call onResults when results command is received', () => {
     renderHook(() => useVSCodeMessage(handlers));
-    
-    const results = { items: [], totalCount: 0, executionTimeMs: 10 };
+
+    const results = {
+      data: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 20,
+      executionTimeMs: 10,
+    };
     const messageEvent = new MessageEvent('message', {
-      data: { command: 'results', results }
+      data: { command: 'results', results },
     });
     window.dispatchEvent(messageEvent);
 
@@ -45,9 +52,9 @@ describe('useVSCodeMessage', () => {
 
   it('should call onError when error command is received', () => {
     renderHook(() => useVSCodeMessage(handlers));
-    
+
     const messageEvent = new MessageEvent('message', {
-      data: { command: 'error', message: 'Something went wrong' }
+      data: { command: 'error', message: 'Something went wrong' },
     });
     window.dispatchEvent(messageEvent);
 
@@ -56,10 +63,10 @@ describe('useVSCodeMessage', () => {
 
   it('should call onSchema when schema command is received', () => {
     renderHook(() => useVSCodeMessage(handlers));
-    
-    const schema = [{ name: 'User', properties: [] }];
+
+    const schema = [{ name: 'User', properties: {} }];
     const messageEvent = new MessageEvent('message', {
-      data: { command: 'schema', schema }
+      data: { command: 'schema', schema },
     });
     window.dispatchEvent(messageEvent);
 
@@ -69,9 +76,9 @@ describe('useVSCodeMessage', () => {
   it('should unregister message event listener on unmount', () => {
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
     const { unmount } = renderHook(() => useVSCodeMessage(handlers));
-    
+
     unmount();
-    
+
     expect(removeEventListenerSpy).toHaveBeenCalledWith('message', expect.any(Function));
   });
 });

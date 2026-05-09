@@ -63,7 +63,13 @@ describe('useRealmQuery', () => {
   it('should reset results if not countOnly', () => {
     const { result } = renderHook(() => useRealmQuery());
     act(() => {
-        result.current.setResults({ data: [], totalCount: 0, executionTimeMs: 0 });
+        result.current.setResults({
+          data: [],
+          totalCount: 0,
+          page: 1,
+          pageSize: 20,
+          executionTimeMs: 0,
+        });
     });
     expect(result.current.results).not.toBeNull();
 

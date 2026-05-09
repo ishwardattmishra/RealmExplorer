@@ -1,77 +1,108 @@
 /* eslint-disable no-console */
+import * as crypto from 'crypto';
 import * as fs from 'fs';
-
 import * as path from 'path';
+import { inspect } from 'node:util';
 import * as vscode from 'vscode';
 
+import type { ILogger } from './ilogger';
+
 export class Logger {
-    private static logPath: string | undefined;
-    private static outputChannel: vscode.OutputChannel | undefined;
+  private static logPath: string | undefined;
+  private static outputChannel: vscode.OutputChannel | undefined;
 
-    public static initialize(extensionContext: vscode.ExtensionContext) {
-        // Create an output channel for real-time viewing
-        this.outputChannel = vscode.window.createOutputChannel('Realm Explorer');
-        
-        // Define log file path in the extension's storage directory
-        if (extensionContext.storageUri) {
-            if (!fs.existsSync(extensionContext.storageUri.fsPath)) {
-                fs.mkdirSync(extensionContext.storageUri.fsPath, { recursive: true });
-            }
-            this.logPath = path.join(extensionContext.storageUri.fsPath, 'realm-explorer.log');
-        } else {
-            // Fallback to a temporary directory if no storage URI is available
-            this.logPath = path.join(process.cwd(), 'realm-explorer.log');
-        }
+  public static initialize(extensionContext: vscode.ExtensionContext) {
+    this.outputChannel = vscode.window.createOutputChannel('Realm Explorer');
 
-        this.info(`Logger initialized. Log file: ${this.logPath}`);
+    if (extensionContext.storageUri) {
+      if (!fs.existsSync(extensionContext.storageUri.fsPath)) {
+        fs.mkdirSync(extensionContext.storageUri.fsPath, { recursive: true });
+      }
+      this.logPath = path.join(extensionContext.storageUri.fsPath, 'realm-explorer.log');
+    } else {
+      this.logPath = path.join(process.cwd(), 'realm-explorer.log');
     }
 
-    public static info(message: string, ...args: any[]) {
-        this.log('INFO', message, ...args);
+    this.info(`Logger initialized. Log file: ${this.logPath}`);
+  }
+
+  public static dispose(): void {
+    this.outputChannel?.dispose();
+    this.outputChannel = undefined;
+    this.logPath = undefined;
+  }
+
+  public static info(message: string, ...args: unknown[]) {
+    this.log('INFO', message, ...args);
+  }
+
+  public static error(message: string, ...args: unknown[]) {
+    this.log('ERROR', message, ...args);
+  }
+
+  public static warn(message: string, ...args: unknown[]) {
+    this.log('WARN', message, ...args);
+  }
+
+  private static serializeArgs(args: unknown[]): string {
+    if (args.length === 0) {
+      return '';
+    }
+    try {
+      const formatted = args.map((a) =>
+        inspect(a, { depth: 8, maxArrayLength: 32, breakLength: 100, compact: false })
+      );
+      return ` ${formatted.join(' | ')}`;
+    } catch {
+      return ' [unserializable args]';
+    }
+  }
+
+  private static log(level: string, message: string, ...args: unknown[]) {
+    const timestamp = new Date().toISOString();
+    const argStr = this.serializeArgs(args);
+    const formattedMessage = `[${timestamp}] [${level}] ${message}${argStr}`;
+
+    if (level === 'ERROR') {
+      console.error(formattedMessage);
+    } else {
+      console.log(formattedMessage);
     }
 
-    public static error(message: string, ...args: any[]) {
-        this.log('ERROR', message, ...args);
+    if (this.outputChannel) {
+      this.outputChannel.appendLine(formattedMessage);
     }
 
-    public static warn(message: string, ...args: any[]) {
-        this.log('WARN', message, ...args);
+    if (this.logPath) {
+      try {
+        fs.appendFileSync(this.logPath, formattedMessage + '\n');
+      } catch (err) {
+        console.error('Failed to write to log file:', err);
+      }
     }
+  }
 
-    private static log(level: string, message: string, ...args: any[]) {
-        const timestamp = new Date().toISOString();
-        const argStr = args.length > 0 ? ` ${JSON.stringify(args)}` : '';
-        const formattedMessage = `[${timestamp}] [${level}] ${message}${argStr}`;
+  public static getLogPath(): string | undefined {
+    return this.logPath;
+  }
 
-        // 1. Log to console
-        if (level === 'ERROR') {
-            console.error(formattedMessage);
-        } else {
-            console.log(formattedMessage);
-        }
-
-        // 2. Log to VS Code Output Channel
-        if (this.outputChannel) {
-            this.outputChannel.appendLine(formattedMessage);
-        }
-
-        // 3. Log to file
-        if (this.logPath) {
-            try {
-                fs.appendFileSync(this.logPath, formattedMessage + '\n');
-            } catch (err) {
-                console.error('Failed to write to log file:', err);
-            }
-        }
+  public static showOutput() {
+    if (this.outputChannel) {
+      this.outputChannel.show();
     }
+  }
+}
 
-    public static getLogPath(): string | undefined {
-        return this.logPath;
-    }
+/** ILogger adapter for default static Logger (dependency injection tests can pass a mock). */
+export function createLoggerFacade(): ILogger {
+  return {
+    info: (message, ...args) => Logger.info(message, ...args),
+    error: (message, ...args) => Logger.error(message, ...args),
+    warn: (message, ...args) => Logger.warn(message, ...args),
+  };
+}
 
-    public static showOutput() {
-        if (this.outputChannel) {
-            this.outputChannel.show();
-        }
-    }
+/** Random nonce for webview Content-Security-Policy (extension host only). */
+export function createWebviewNonce(): string {
+  return crypto.randomBytes(16).toString('base64');
 }

@@ -1,8 +1,6 @@
 import { render, fireEvent, act } from '@testing-library/preact';
 import { Toolbar } from './Toolbar';
 import { describe, it, expect, vi } from 'vitest';
-import { h } from 'preact';
-
 describe('Toolbar', () => {
   const mockSchema = [
     { name: 'User', properties: {} },
@@ -69,7 +67,7 @@ describe('Toolbar', () => {
 
   it('should call onRunQuery when Run Query is clicked', () => {
     const { getByText } = render(<Toolbar {...defaultProps} />);
-    fireEvent.click(getByText('▶ Run Query'));
+    fireEvent.click(getByText('Run Query'));
     expect(defaultProps.onRunQuery).toHaveBeenCalled();
   });
 });

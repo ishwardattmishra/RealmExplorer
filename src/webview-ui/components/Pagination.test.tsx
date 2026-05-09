@@ -1,12 +1,12 @@
 import { render, fireEvent } from '@testing-library/preact';
 import { Pagination } from './Pagination';
 import { vi, describe, it, expect } from 'vitest';
-import { h } from 'preact';
-
 describe('Pagination', () => {
   const mockResults = {
     data: new Array(20).fill({}),
     totalCount: 100,
+    page: 1,
+    pageSize: 20,
     executionTimeMs: 15,
   };
 
