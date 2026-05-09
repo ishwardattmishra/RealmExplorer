@@ -297,6 +297,31 @@ When making changes:
 7. Publish: `vsce publish` (if configured)
 8. Tag release in git
 
+### Visual Studio Marketplace vs Open VSX publisher
+
+`package.json` **`publisher`** is **`IshwarDattMishra`** so it matches the [Visual Studio Marketplace](https://marketplace.visualstudio.com/) publisher id used by `vsce publish`.
+
+[Open VSX](https://open-vsx.org/) uses a separate namespace (default **`ishwardattmishra`**). CI runs `scripts/set-openvsx-publisher.js` before `ovsx publish` so only the Open VSX package gets that publisher. Create the namespace once if you have not already:
+
+```bash
+export OVSX_PAT='your-open-vsx-personal-access-token'
+npx ovsx -p "$OVSX_PAT" create-namespace ishwardattmishra
+```
+
+See [Publishing Extensions](https://github.com/eclipse/openvsx/wiki/Publishing-Extensions).
+
+To use a different Open VSX publisher id, set the GitHub repository variable **`OPEN_VSX_PUBLISHER`**. The script reads that variable and defaults to **`ishwardattmishra`** when it is unset or empty.
+
+Local Open VSX publish after Marketplace:
+
+```bash
+export OVSX_PAT='...'
+export OPEN_VSX_PUBLISHER=ishwardattmishra   # optional; this is the default
+node scripts/set-openvsx-publisher.js
+npx ovsx -p "$OVSX_PAT" publish --no-dependencies
+git checkout package.json   # restore IshwarDattMishra for development
+```
+
 ---
 
 **Happy Developing!** 🛠️
