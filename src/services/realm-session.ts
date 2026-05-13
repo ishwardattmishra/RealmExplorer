@@ -1,5 +1,4 @@
-import realmPkg from 'realm';
-const { Realm } = realmPkg;
+import { Realm } from 'realm';
 
 /**
  * Owns Realm open/close lifecycle and the active Realm instance.
