@@ -52,11 +52,11 @@ npx @vscode/vsce ls | grep "realm.node"
 
 ### 4. Publishing
 
+**Do not use `--no-dependencies`.** With that flag, vsce sets dependency mode to `none` and only globs the extension root while ignoring `node_modules/**`, so **no** `node_modules` paths (including `realm`) are ever candidates for packaging. Default behavior runs `npm list --production` and collects each production dependency folder; `.vscodeignore` then keeps only the `realm` slices you whitelist.
+
 ```bash
-# --no-dependencies: Don't reinstall during packaging
-# (we already have the correct platform binary)
-vsce publish --target "$TARGET" --no-dependencies
-ovsx publish --target "$TARGET" --no-dependencies
+vsce publish --target "$TARGET"
+ovsx publish --target "$TARGET"
 ```
 
 ## Workflow Steps
@@ -183,12 +183,12 @@ Why we build on native OS instead of cross-compilation:
 ### Added:
 1. ✅ Realm binary verification step
 2. ✅ Package contents preview
-3. ✅ Comments explaining --no-dependencies
+3. ✅ Comments explaining why `--no-dependencies` must **not** be used when shipping `node_modules/realm`
 4. ✅ Platform-specific binary checks
 
 ### Kept:
 - ✅ Multi-platform matrix
-- ✅ --no-dependencies flag (correct usage)
+- ✅ Default vsce/ovsx dependency detection (`npm list` production tree)
 - ✅ Separate Open VSX publisher handling
 - ✅ Lint + test before publish
 
