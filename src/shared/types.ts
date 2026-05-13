@@ -12,6 +12,7 @@ export interface RealmFieldInfo {
 export interface RealmSchemaInfo {
   name: string;
   primaryKey?: string;
+  embedded?: boolean;
   properties: Record<string, RealmFieldInfo>;
 }
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import type { QueryResult, RealmRow, RealmSchemaInfo } from '../types';
 import { SmartCell } from './SmartCell';
@@ -11,6 +11,9 @@ interface DataTableProps {
   onSelectRow: (row: RealmRow) => void;
   loading: boolean;
   error: string | null;
+  editMode: boolean;
+  onEditRow: (row: RealmRow) => void;
+  onDeleteRow: (row: RealmRow) => void;
 }
 
 function rowSelected(
@@ -36,8 +39,35 @@ export const DataTable: React.FC<DataTableProps> = ({
   onSelectRow,
   loading,
   error,
+  editMode,
+  onEditRow,
+  onDeleteRow,
 }) => {
   const captionId = 'realm-data-table-caption';
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<unknown>(null);
+
+  const getPk = (row: RealmRow) => {
+    const pk = currentSchema?.primaryKey;
+    return pk ? row[pk] : undefined;
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, row: RealmRow) => {
+    e.stopPropagation();
+    const pkVal = getPk(row);
+    if (confirmDeleteKey !== null && confirmDeleteKey === pkVal) {
+      // Second click = confirmed
+      onDeleteRow(row);
+      setConfirmDeleteKey(null);
+    } else {
+      setConfirmDeleteKey(pkVal ?? row);
+    }
+  };
+
+  const handleEditClick = (e: React.MouseEvent, row: RealmRow) => {
+    e.stopPropagation();
+    setConfirmDeleteKey(null);
+    onEditRow(row);
+  };
 
   return (
     <div className="table-viewport" aria-busy={loading} aria-describedby={error ? 'realm-table-error' : undefined}>
@@ -64,19 +94,30 @@ export const DataTable: React.FC<DataTableProps> = ({
                   {key}
                 </th>
               ))}
+              {editMode && (
+                <th scope="col" className="actions-col">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {results.data.map((row, i) => {
               const rowKey = (currentSchema?.primaryKey && row[currentSchema.primaryKey]) ?? i;
               const selected = rowSelected(selectedRow, row, currentSchema);
+              const pkVal = getPk(row);
+              const awaitingConfirm = confirmDeleteKey !== null && confirmDeleteKey === (pkVal ?? row);
+
               return (
                 <tr
                   key={String(rowKey)}
                   className={selected ? 'selected' : ''}
                   tabIndex={0}
                   aria-selected={selected}
-                  onClick={() => onSelectRow(row)}
+                  onClick={() => {
+                    setConfirmDeleteKey(null);
+                    onSelectRow(row);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
@@ -89,6 +130,51 @@ export const DataTable: React.FC<DataTableProps> = ({
                       <SmartCell value={row[key]} typeInfo={currentSchema?.properties[key]} />
                     </td>
                   ))}
+                  {editMode && (
+                    <td className="actions-col" onClick={(e) => e.stopPropagation()}>
+                      <div className="row-actions">
+                        <button
+                          type="button"
+                          className="action-btn action-edit"
+                          onClick={(e) => handleEditClick(e, row)}
+                          title="Edit this row"
+                          aria-label="Edit row"
+                        >
+                          ✏
+                        </button>
+                        {awaitingConfirm ? (
+                          <span className="delete-confirm">
+                            <button
+                              type="button"
+                              className="action-btn action-delete-confirm"
+                              onClick={(e) => handleDeleteClick(e, row)}
+                              title="Click again to confirm deletion"
+                            >
+                              ✓ Confirm
+                            </button>
+                            <button
+                              type="button"
+                              className="action-btn action-cancel"
+                              onClick={(e) => { e.stopPropagation(); setConfirmDeleteKey(null); }}
+                              title="Cancel"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="action-btn action-delete"
+                            onClick={(e) => handleDeleteClick(e, row)}
+                            title="Delete this row"
+                            aria-label="Delete row"
+                          >
+                            🗑
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}

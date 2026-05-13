@@ -16,6 +16,8 @@ export class RealmBackend implements IRealmBackend {
   private readonly session = new RealmSession();
   private readonly typeCoercer: TypeCoercer;
   private readonly queryExecutor: QueryExecutor;
+  /** Last opened file path, needed for reopenRealm */
+  private currentFilePath: string | undefined;
 
   constructor(private readonly logger: ILogger = createLoggerFacade()) {
     this.typeCoercer = new TypeCoercer(this.logger);
@@ -27,6 +29,7 @@ export class RealmBackend implements IRealmBackend {
     try {
       this.logger.info('Calling Realm.open...');
       await this.session.open(filePath, readOnly);
+      this.currentFilePath = filePath;
       this.logger.info('Realm opened successfully');
 
       const schema = this.getSchema();
@@ -36,6 +39,14 @@ export class RealmBackend implements IRealmBackend {
       this.logger.error('Failed to open Realm:', error);
       throw error;
     }
+  }
+
+  async reopenRealm(writeable: boolean): Promise<RealmSchemaInfo[]> {
+    if (!this.currentFilePath) {
+      throw new Error('No Realm file has been opened yet.');
+    }
+    this.logger.info(`Reopening Realm (writeable: ${writeable})`);
+    return this.openRealm(this.currentFilePath, !writeable);
   }
 
   getSchema(): RealmSchemaInfo[] {
@@ -95,5 +106,52 @@ export class RealmBackend implements IRealmBackend {
 
   isOpen(): boolean {
     return this.session.isOpen();
+  }
+
+  // ── CRUD ────────────────────────────────────────────────────────────────────
+
+  async insertRow(objectType: string, data: Record<string, unknown>): Promise<void> {
+    this.logger.info(`Inserting row into ${objectType}`, data);
+    const realm = this.session.getRealmOrThrow();
+    realm.write(() => {
+      realm.create(objectType, data);
+    });
+  }
+
+  async updateRow(
+    objectType: string,
+    primaryKey: unknown,
+    field: string,
+    value: unknown
+  ): Promise<void> {
+    this.logger.info(`Updating ${objectType}[pk=${String(primaryKey)}].${field}`);
+    const realm = this.session.getRealmOrThrow();
+    const schema = this.getSchema().find((s) => s.name === objectType);
+    if (!schema?.primaryKey) {
+      throw new Error(`Cannot update: "${objectType}" has no primary key.`);
+    }
+    const obj = realm.objectForPrimaryKey(objectType, primaryKey as Parameters<typeof realm.objectForPrimaryKey>[1]);
+    if (!obj) {
+      throw new Error(`Object not found: ${objectType}[pk=${String(primaryKey)}]`);
+    }
+    realm.write(() => {
+      (obj as Record<string, unknown>)[field] = value;
+    });
+  }
+
+  async deleteRow(objectType: string, primaryKey: unknown): Promise<void> {
+    this.logger.info(`Deleting ${objectType}[pk=${String(primaryKey)}]`);
+    const realm = this.session.getRealmOrThrow();
+    const schema = this.getSchema().find((s) => s.name === objectType);
+    if (!schema?.primaryKey) {
+      throw new Error(`Cannot delete: "${objectType}" has no primary key.`);
+    }
+    const obj = realm.objectForPrimaryKey(objectType, primaryKey as Parameters<typeof realm.objectForPrimaryKey>[1]);
+    if (!obj) {
+      throw new Error(`Object not found: ${objectType}[pk=${String(primaryKey)}]`);
+    }
+    realm.write(() => {
+      realm.delete(obj);
+    });
   }
 }

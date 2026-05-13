@@ -41,4 +41,67 @@ describe('Header', () => {
 
     expect(queryByText('SELECT COLUMNS')).toBeNull();
   });
+
+  it('should handle Close DB confirmation flow', async () => {
+    const onCloseDB = vi.fn();
+    const { getByText, queryByText, getByTitle } = render(
+      <Header {...defaultProps} isOpen={true} onCloseDB={onCloseDB} />
+    );
+
+    // Initial state: Close DB button is visible
+    const closeBtn = getByTitle('Close the current Realm database');
+    expect(closeBtn).toBeTruthy();
+
+    // Click Close DB -> Enter confirmation state
+    await act(async () => {
+      fireEvent.click(closeBtn);
+    });
+
+    expect(getByText('Close DB?')).toBeTruthy();
+    expect(getByText('Confirm')).toBeTruthy();
+    expect(getByText('Cancel')).toBeTruthy();
+    expect(queryByText('Close DB')).toBeNull();
+
+    // Click Cancel -> Return to initial state
+    await act(async () => {
+      fireEvent.click(getByText('Cancel'));
+    });
+
+    expect(queryByText('Close DB?')).toBeNull();
+    expect(getByText('Close DB')).toBeTruthy();
+
+    // Click Close DB again -> Confirm
+    await act(async () => {
+      fireEvent.click(getByText('Close DB'));
+    });
+
+    await act(async () => {
+      fireEvent.click(getByText('Confirm'));
+    });
+
+    expect(onCloseDB).toHaveBeenCalledTimes(1);
+    expect(queryByText('Close DB?')).toBeNull();
+  });
+
+  it('should auto-cancel Close DB confirmation after timeout', async () => {
+    vi.useFakeTimers();
+    const { getByText, queryByText } = render(
+      <Header {...defaultProps} isOpen={true} />
+    );
+
+    await act(async () => {
+      fireEvent.click(getByText('Close DB'));
+    });
+
+    expect(getByText('Close DB?')).toBeTruthy();
+
+    await act(async () => {
+      vi.advanceTimersByTime(4001);
+    });
+
+    expect(queryByText('Close DB?')).toBeNull();
+    expect(getByText('Close DB')).toBeTruthy();
+    
+    vi.useRealTimers();
+  });
 });

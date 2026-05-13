@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { buildParameterizedRql } from './utils/rql-utils';
 import { DetailsPanel } from './components/DetailsPanel';
+import { EditRowModal } from './components/EditRowModal';
 import { FilterPanel } from './components/FilterPanel';
 import { DataTable } from './components/DataTable';
 import { Header } from './components/Header';
@@ -9,6 +10,7 @@ import { Pagination } from './components/Pagination';
 import { Toolbar } from './components/Toolbar';
 import { useRealmQuery } from './hooks/useRealmQuery';
 import { useVSCodeMessage } from './hooks/useVSCodeMessage';
+import { vscode } from './vscode';
 import type { FilterRow, RealmRow, RealmSchemaInfo, TabType } from './types';
 
 const App: React.FC = () => {
@@ -23,6 +25,15 @@ const App: React.FC = () => {
   const [selectedRow, setSelectedRow] = useState<RealmRow | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
+
+  // Edit mode & CRUD state
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState<boolean>(
+    () => !!(globalThis.INITIAL_SCHEMA && (globalThis.INITIAL_SCHEMA as RealmSchemaInfo[]).length > 0)
+  );
+  /** null = closed, null row = adding new, non-null row = editing */
+  const [editModalRow, setEditModalRow] = useState<RealmRow | null | undefined>(undefined);
+  const [mutationStatus, setMutationStatus] = useState<string | null>(null);
 
   const { loading, setLoading, error, setError, results, setResults, executeQuery } = useRealmQuery();
 
@@ -94,6 +105,7 @@ const App: React.FC = () => {
       setVisualFilters([]);
       setCurrentPage(1);
       setSelectedRow(null);
+      setIsOpen(true);
     },
     onResults: (res) => {
       setResults(res);
@@ -105,6 +117,27 @@ const App: React.FC = () => {
     },
     onSchema: (newSchema) => {
       setSchema(newSchema);
+      setIsOpen(newSchema.length > 0);
+    },
+    onRealmClosed: () => {
+      setSchema([]);
+      setObjectType('');
+      setResults(null);
+      setSelectedRow(null);
+      setEditMode(false);
+      setIsOpen(false);
+      setMutationStatus(null);
+    },
+    onMutationSuccess: (action) => {
+      const labels = { insert: 'Row added', update: 'Row updated', delete: 'Row deleted' };
+      setMutationStatus(labels[action]);
+      setTimeout(() => setMutationStatus(null), 3000);
+      // Refresh results
+      setIsInitialLoad(false);
+      triggerQuery(false);
+    },
+    onMutationError: (msg) => {
+      setError(msg);
     },
   });
 
@@ -141,6 +174,40 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleCloseDB = () => {
+    vscode.postMessage({ command: 'closeRealm' });
+  };
+
+  const handleToggleEditMode = () => {
+    const nextEdit = !editMode;
+    setEditMode(nextEdit);
+    vscode.postMessage({ command: 'reopenRealm', writeable: nextEdit });
+  };
+
+  const handleAddRow = () => {
+    setEditModalRow(null); // null = new row
+  };
+
+  const handleEditRow = (row: RealmRow) => {
+    setEditModalRow(row);
+  };
+
+  const handleDeleteRow = (row: RealmRow) => {
+    const pk = currentSchema?.primaryKey;
+    const primaryKey = pk ? row[pk] : undefined;
+    if (primaryKey === undefined) {
+      setError('Cannot delete: this object type has no primary key.');
+      return;
+    }
+    vscode.postMessage({ command: 'deleteRow', objectType, primaryKey });
+  };
+
+  const handleModalClose = () => {
+    setEditModalRow(undefined); // undefined = modal closed
+  };
+
+  const isModalOpen = editModalRow !== undefined;
+
   return (
     <div className="app-container">
       <Header
@@ -153,6 +220,10 @@ const App: React.FC = () => {
         }
         onClearAllColumns={() => setVisibleColumns(new Set())}
         onExport={handleExport}
+        editMode={editMode}
+        onToggleEditMode={handleToggleEditMode}
+        onCloseDB={handleCloseDB}
+        isOpen={isOpen}
       />
 
       <Toolbar
@@ -168,6 +239,8 @@ const App: React.FC = () => {
         onLimitChange={setLimit}
         onRunQuery={() => triggerQuery(false)}
         loading={loading}
+        editMode={editMode}
+        onAddRow={handleAddRow}
       />
 
       <FilterPanel
@@ -181,6 +254,12 @@ const App: React.FC = () => {
         onAddFilterRow={handleAddFilterRow}
       />
 
+      {mutationStatus && (
+        <div className="mutation-toast" role="status" aria-live="polite">
+          ✅ {mutationStatus}
+        </div>
+      )}
+
       <main className={`content-area ${selectedRow ? 'with-details' : ''}`}>
         <DataTable
           results={results}
@@ -190,6 +269,9 @@ const App: React.FC = () => {
           onSelectRow={setSelectedRow}
           loading={loading}
           error={error}
+          editMode={editMode}
+          onEditRow={handleEditRow}
+          onDeleteRow={handleDeleteRow}
         />
 
         {selectedRow && <DetailsPanel selectedRow={selectedRow} onClose={() => setSelectedRow(null)} />}
@@ -201,6 +283,15 @@ const App: React.FC = () => {
         onPageChange={setCurrentPage}
         pageSize={pageSize}
       />
+
+      {isModalOpen && currentSchema && (
+        <EditRowModal
+          row={editModalRow ?? null}
+          objectType={objectType}
+          currentSchema={currentSchema}
+          onClose={handleModalClose}
+        />
+      )}
     </div>
   );
 };
