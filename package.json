@@ -28,7 +28,7 @@
     "data"
   ],
   "activationEvents": [
-    "onView:realm-schema"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {

@@ -8,6 +8,49 @@ The publish workflow builds and publishes platform-specific VSIXs for:
 - **macOS Intel**: darwin-x64
 - **macOS Apple Silicon**: darwin-arm64
 
+## Local testing (same steps as `publish.yml`, no marketplace upload)
+
+### Option A — Dry run script (recommended)
+
+Runs `npm ci`, Realm check, lint, tests, compile, `vsce ls` checks, then `vsce package` for your host (or a chosen target). Does **not** run `vsce publish` / `ovsx` (no tokens).
+
+```bash
+npm run workflow:publish-dry-run
+# or explicit target (matches workflow matrix):
+bash scripts/publish-workflow-dry-run.sh linux-x64
+TARGET=darwin-arm64 bash scripts/publish-workflow-dry-run.sh
+```
+
+VSIX output: `artifacts/realm-vscode-<version>-<target>.vsix` (override dir with `OUT_DIR=./dist`).
+
+### Option B — [act](https://github.com/nektos/act) (Docker)
+
+`act` runs GitHub Actions in containers. Caveats:
+
+- Only **`ubuntu-latest` / `linux-x64`** rows map cleanly to the default Docker image. `windows-latest` / `macos-latest` need extra runner images or host setup and are often skipped locally.
+- **`Publish` steps need real `VSCE_PAT` and `OVSX_PAT`** unless you stop the job before those steps (e.g. `--dryrun` only validates the workflow graph).
+
+```bash
+brew install act   # macOS; requires Docker Desktop / engine running
+
+# List jobs
+act -l -W .github/workflows/publish.yml
+
+# Simulate push; run one matrix combination (Linux)
+act push -W .github/workflows/publish.yml -j publish \
+  --matrix os:ubuntu-latest,target:linux-x64 \
+  --secret-file .secrets
+```
+
+Create `.secrets` (gitignored) only if you intend to hit real publish steps:
+
+```
+VSCE_PAT=...
+OVSX_PAT=...
+```
+
+For day-to-day validation, prefer **Option A** so you never send tokens from your machine through `act`.
+
 ## How It Works
 
 ### 1. Platform-Specific Builds
