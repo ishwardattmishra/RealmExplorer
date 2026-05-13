@@ -65,13 +65,14 @@ jobs:
           echo "Checking realm.node will be included:"
           npx @vscode/vsce ls | grep "realm\.node" && echo "✓ Native binary will be included" || echo "✗ WARNING: Native binary not found!"
 
-      # --no-dependencies: Don't reinstall deps during packaging (we already have platform-specific realm)
-      # realm is selectively bundled via .vscodeignore (only dist/ and prebuilds/node/)
+      # Do NOT pass --no-dependencies: vsce then skips npm dependency paths and never collects
+      # files under node_modules/ (glob uses ignore: node_modules/** on cwd only). Realm must
+      # be included via npm list + .vscodeignore (!node_modules/realm/...).
       - name: Publish to Marketplace
         shell: bash
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npx @vscode/vsce publish --target "${{ matrix.target }}" --no-dependencies
+        run: npx @vscode/vsce publish --target "${{ matrix.target }}"
 
       # package.json publisher stays IshwarDattMishra for VS Marketplace (vsce above).
       # Open VSX uses a separate namespace (default ishwardattmishra); override with repo variable OPEN_VSX_PUBLISHER.
@@ -82,4 +83,4 @@ jobs:
           OPEN_VSX_PUBLISHER: ${{ vars.OPEN_VSX_PUBLISHER }}
         run: |
           node scripts/set-openvsx-publisher.js
-          npx ovsx -p "$OVSX_PAT" publish --target "${{ matrix.target }}" --no-dependencies
+          npx ovsx -p "$OVSX_PAT" publish --target "${{ matrix.target }}"
