@@ -7,12 +7,23 @@ import { Logger } from './services/logger';
 import { RealmBackend } from './services/realm-backend';
 import { RealmSchemaProvider } from './providers/SchemaProvider';
 import { RealmPanel } from './webview/RealmPanel';
+import { RealmInstaller } from './services/realm-installer';
 
 let activeRealmBackend: RealmBackend | undefined;
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   Logger.initialize(context);
   Logger.info('Realm Explorer extension activating...');
+
+  // Ensure realm native module is available for this platform
+  const realmAvailable = await RealmInstaller.ensureRealmInstalled(context);
+  
+  if (!realmAvailable) {
+    Logger.warn('Realm module not available - extension functionality will be limited');
+    // Continue activation but show warning in UI
+  } else {
+    Logger.info('Realm module ready');
+  }
 
   const realmBackend = new RealmBackend();
   activeRealmBackend = realmBackend;

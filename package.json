@@ -96,6 +96,16 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "title": "Realm Explorer",
+      "properties": {
+        "realm.autoInstallNativeModule": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically download and install platform-specific Realm native module on first activation if missing."
+        }
+      }
     }
   },
   "scripts": {
