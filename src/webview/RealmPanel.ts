@@ -18,7 +18,8 @@ export class RealmPanel {
     extensionUri: vscode.Uri,
     backend: IRealmBackend,
     initialObjectType?: string,
-    logger: ILogger = createLoggerFacade()
+    logger: ILogger = createLoggerFacade(),
+    onRealmClosed?: () => void
   ) {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
@@ -48,7 +49,7 @@ export class RealmPanel {
       }
     );
 
-    RealmPanel.currentPanel = new RealmPanel(panel, extensionUri, backend, logger, initialObjectType);
+    RealmPanel.currentPanel = new RealmPanel(panel, extensionUri, backend, logger, initialObjectType, onRealmClosed);
   }
 
   private constructor(
@@ -56,7 +57,8 @@ export class RealmPanel {
     extensionUri: vscode.Uri,
     backend: IRealmBackend,
     logger: ILogger,
-    initialObjectType?: string
+    initialObjectType?: string,
+    private readonly onRealmClosed?: () => void
   ) {
     this._panel = panel;
     this._extensionUri = extensionUri;
@@ -71,6 +73,7 @@ export class RealmPanel {
           postMessage: (msg) => this._panel.webview.postMessage(msg),
           backend,
           logger: this._logger,
+          onRealmClosed: this.onRealmClosed,
         });
       },
       null,

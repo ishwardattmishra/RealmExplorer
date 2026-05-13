@@ -18,6 +18,12 @@ export function activate(context: vscode.ExtensionContext) {
   activeRealmBackend = realmBackend;
   const schemaProvider = new RealmSchemaProvider(realmBackend);
 
+  /** Shared callback: refreshes the schema tree + context key after any close path. */
+  const onRealmClosed = () => {
+    schemaProvider.refresh();
+    vscode.commands.executeCommand('setContext', 'realm.isOpen', false);
+  };
+
   context.subscriptions.push(vscode.window.registerTreeDataProvider('realm-schema', schemaProvider));
 
   context.subscriptions.push({
@@ -53,6 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
         try {
           await realmBackend.openRealm(filePath);
           schemaProvider.refresh();
+          await vscode.commands.executeCommand('setContext', 'realm.isOpen', true);
           vscode.window.showInformationMessage(`Opened Realm: ${path.basename(filePath)}`);
           vscode.commands.executeCommand('realm.runQuery');
         } catch (err) {
@@ -70,7 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage('Please open a Realm file first.');
         return;
       }
-      RealmPanel.createOrShow(context.extensionUri, realmBackend, objectType);
+      RealmPanel.createOrShow(context.extensionUri, realmBackend, objectType, undefined, onRealmClosed);
     }),
 
     vscode.commands.registerCommand('realm.showLogs', async () => {
@@ -86,6 +93,20 @@ export function activate(context: vscode.ExtensionContext) {
       } else {
         vscode.window.showInformationMessage('Log file not found or not yet created.');
       }
+    }),
+
+    vscode.commands.registerCommand('realm.closeFile', () => {
+      if (!realmBackend.isOpen()) {
+        vscode.window.showInformationMessage('No Realm file is currently open.');
+        return;
+      }
+      realmBackend.closeRealm();
+      onRealmClosed();
+      // Close the query panel if open
+      if (RealmPanel.currentPanel) {
+        RealmPanel.currentPanel.dispose();
+      }
+      vscode.window.showInformationMessage('Realm file closed.');
     })
   );
 }

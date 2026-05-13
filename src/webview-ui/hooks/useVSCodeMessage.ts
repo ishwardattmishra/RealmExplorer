@@ -9,6 +9,9 @@ interface MessageHandlers {
   onResults?: (results: QueryResult) => void;
   onError?: (message: string) => void;
   onSchema?: (schema: RealmSchemaInfo[]) => void;
+  onRealmClosed?: () => void;
+  onMutationSuccess?: (action: 'insert' | 'update' | 'delete') => void;
+  onMutationError?: (message: string) => void;
 }
 
 export function useVSCodeMessage(handlers: MessageHandlers) {
@@ -36,6 +39,15 @@ export function useVSCodeMessage(handlers: MessageHandlers) {
           handlersRef.current.onSchema?.(message.schema);
           break;
         case 'count':
+          break;
+        case 'realmClosed':
+          handlersRef.current.onRealmClosed?.();
+          break;
+        case 'mutationSuccess':
+          handlersRef.current.onMutationSuccess?.(message.action);
+          break;
+        case 'mutationError':
+          handlersRef.current.onMutationError?.(message.message);
           break;
         default:
           break;

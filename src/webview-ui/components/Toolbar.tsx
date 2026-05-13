@@ -12,6 +12,8 @@ interface ToolbarProps {
   onLimitChange: (limit: number) => void;
   onRunQuery: () => void;
   loading: boolean;
+  editMode: boolean;
+  onAddRow: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -24,6 +26,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onLimitChange,
   onRunQuery,
   loading,
+  editMode,
+  onAddRow,
 }) => {
   return (
     <section className="toolbar" aria-label="Query parameters">
@@ -36,8 +40,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             onChange={(e) => onObjectTypeChange(e.currentTarget.value)}
           >
             {schema.map((s) => (
-              <option key={s.name} value={s.name}>
-                {s.name}
+              <option
+                key={s.name}
+                value={s.name}
+                disabled={s.embedded === true}
+                title={s.embedded ? 'Embedded objects cannot be queried directly' : undefined}
+              >
+                {s.name}{s.embedded ? ' [embedded]' : ''}
               </option>
             ))}
           </select>
@@ -77,6 +86,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         >
           Run Query
         </button>
+        {editMode && (
+          <button
+            type="button"
+            id="realm-add-row-btn"
+            className="btn btn-success"
+            onClick={onAddRow}
+            disabled={!objectType}
+            title="Add a new row to the current object type"
+          >
+            + Add Row
+          </button>
+        )}
       </div>
     </section>
   );

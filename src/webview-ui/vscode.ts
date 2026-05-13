@@ -6,4 +6,24 @@ export interface VsCodeApi {
 
 declare function acquireVsCodeApi(): VsCodeApi;
 
-export const vscode: VsCodeApi = acquireVsCodeApi();
+/**
+ * Handle environments where acquireVsCodeApi is not available (e.g. Vitest/Unit tests)
+ */
+function getVsCodeApi(): VsCodeApi {
+  if (typeof acquireVsCodeApi === 'function') {
+    return acquireVsCodeApi();
+  }
+  
+  // Return a mock implementation for testing environments
+  return {
+    postMessage: (msg: unknown) => {
+      console.log('Mock postMessage:', msg);
+    },
+    getState: () => ({}),
+    setState: (state: unknown) => {
+      console.log('Mock setState:', state);
+    },
+  };
+}
+
+export const vscode: VsCodeApi = getVsCodeApi();

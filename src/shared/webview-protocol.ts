@@ -6,7 +6,10 @@ export type ExtensionToWebviewMessage =
   | { command: 'error'; message: string }
   | { command: 'schema'; schema: RealmSchemaInfo[] }
   | { command: 'selectObjectType'; objectType: string }
-  | { command: 'count'; count: number; executionTimeMs: number };
+  | { command: 'count'; count: number; executionTimeMs: number }
+  | { command: 'realmClosed' }
+  | { command: 'mutationSuccess'; action: 'insert' | 'update' | 'delete' }
+  | { command: 'mutationError'; message: string };
 
 /** Messages sent from the webview to the extension host. */
 export type WebviewToExtensionMessage =
@@ -25,7 +28,26 @@ export type WebviewToExtensionMessage =
       filter: string;
       args: unknown[];
     }
-  | { command: 'getSchema' };
+  | { command: 'getSchema' }
+  | { command: 'closeRealm' }
+  | { command: 'reopenRealm'; writeable: boolean }
+  | {
+      command: 'insertRow';
+      objectType: string;
+      data: Record<string, unknown>;
+    }
+  | {
+      command: 'updateRow';
+      objectType: string;
+      primaryKey: unknown;
+      field: string;
+      value: unknown;
+    }
+  | {
+      command: 'deleteRow';
+      objectType: string;
+      primaryKey: unknown;
+    };
 
 export type WebviewCommand = WebviewToExtensionMessage['command'];
 
@@ -34,11 +56,36 @@ export function isWebviewToExtensionMessage(data: unknown): data is WebviewToExt
     return false;
   }
   const cmd = (data as { command?: unknown }).command;
-  if (cmd !== 'executeQuery' && cmd !== 'countQuery' && cmd !== 'getSchema') {
+  const validCommands: WebviewCommand[] = [
+    'executeQuery',
+    'countQuery',
+    'getSchema',
+    'closeRealm',
+    'reopenRealm',
+    'insertRow',
+    'updateRow',
+    'deleteRow',
+  ];
+  if (!validCommands.includes(cmd as WebviewCommand)) {
     return false;
   }
-  if (cmd === 'getSchema') {
+  if (cmd === 'getSchema' || cmd === 'closeRealm') {
     return true;
+  }
+  if (cmd === 'reopenRealm') {
+    return typeof (data as { writeable?: unknown }).writeable === 'boolean';
+  }
+  if (cmd === 'insertRow') {
+    const o = data as { objectType?: unknown; data?: unknown };
+    return typeof o.objectType === 'string' && typeof o.data === 'object' && o.data !== null;
+  }
+  if (cmd === 'updateRow') {
+    const o = data as { objectType?: unknown; primaryKey?: unknown; field?: unknown };
+    return typeof o.objectType === 'string' && 'primaryKey' in (data as object) && typeof o.field === 'string';
+  }
+  if (cmd === 'deleteRow') {
+    const o = data as { objectType?: unknown };
+    return typeof o.objectType === 'string' && 'primaryKey' in (data as object);
   }
   const o = data as { objectType?: unknown; filter?: unknown; args?: unknown };
   if (typeof o.objectType !== 'string' || typeof o.filter !== 'string') {
@@ -89,6 +136,12 @@ export function isExtensionToWebviewMessage(data: unknown): data is ExtensionToW
         typeof (data as { count?: unknown }).count === 'number' &&
         typeof (data as { executionTimeMs?: unknown }).executionTimeMs === 'number'
       );
+    case 'realmClosed':
+      return true;
+    case 'mutationSuccess':
+      return typeof (data as { action?: unknown }).action === 'string';
+    case 'mutationError':
+      return typeof (data as { message?: unknown }).message === 'string';
     default:
       return false;
   }

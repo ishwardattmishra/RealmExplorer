@@ -2,6 +2,7 @@ import type { QueryResult, RealmSchemaInfo } from '../shared/types';
 
 export interface IRealmBackend {
   openRealm(filePath: string, readOnly?: boolean): Promise<RealmSchemaInfo[]>;
+  reopenRealm(writeable: boolean): Promise<RealmSchemaInfo[]>;
   getSchema(): RealmSchemaInfo[];
   executeQuery(
     objectType: string,
@@ -18,4 +19,7 @@ export interface IRealmBackend {
   ): Promise<{ count: number; executionTimeMs: number }>;
   closeRealm(): void;
   isOpen(): boolean;
+  insertRow(objectType: string, data: Record<string, unknown>): Promise<void>;
+  updateRow(objectType: string, primaryKey: unknown, field: string, value: unknown): Promise<void>;
+  deleteRow(objectType: string, primaryKey: unknown): Promise<void>;
 }
