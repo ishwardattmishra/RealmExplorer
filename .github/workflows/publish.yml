@@ -32,6 +32,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Verify realm native module installed correctly for this platform
+      - name: Verify Realm module
+        shell: bash
+        run: |
+          echo "Checking realm installation..."
+          if [ -f "node_modules/realm/prebuilds/node/realm.node" ]; then
+            echo "✓ Realm native binary found"
+            file node_modules/realm/prebuilds/node/realm.node || true
+            ls -lh node_modules/realm/prebuilds/node/realm.node
+          else
+            echo "✗ Realm native binary not found!"
+            exit 1
+          fi
+
       - name: Lint
         run: npm run lint
 
@@ -41,6 +55,18 @@ jobs:
       - name: Build
         run: npm run compile
 
+      # Verify what will be packaged
+      - name: Preview package contents
+        shell: bash
+        run: |
+          echo "Files to be included in VSIX:"
+          npx @vscode/vsce ls | grep -E "realm|prebuilds" | head -20 || echo "No realm files preview (this is expected if too many files)"
+          echo ""
+          echo "Checking realm.node will be included:"
+          npx @vscode/vsce ls | grep "realm\.node" && echo "✓ Native binary will be included" || echo "✗ WARNING: Native binary not found!"
+
+      # --no-dependencies: Don't reinstall deps during packaging (we already have platform-specific realm)
+      # realm is selectively bundled via .vscodeignore (only dist/ and prebuilds/node/)
       - name: Publish to Marketplace
         shell: bash
         env:
