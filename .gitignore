@@ -93,6 +93,7 @@ out/
 
 # VS Code Extension
 *.vsix
+artifacts/
 vite.config.js.map
 
 # Realm

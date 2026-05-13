@@ -15,36 +15,59 @@ export async function activate(context: vscode.ExtensionContext) {
   Logger.initialize(context);
   Logger.info('Realm Explorer extension activating...');
 
-  // Ensure realm native module is available for this platform
-  const realmAvailable = await RealmInstaller.ensureRealmInstalled(context);
-  
-  if (!realmAvailable) {
-    Logger.warn('Realm module not available - extension functionality will be limited');
-    // Continue activation but show warning in UI
-  } else {
-    Logger.info('Realm module ready');
-  }
+  let realmBackend: RealmBackend | undefined;
+  let schemaProvider: RealmSchemaProvider | undefined;
 
-  const realmBackend = new RealmBackend();
-  activeRealmBackend = realmBackend;
-  const schemaProvider = new RealmSchemaProvider(realmBackend);
+  // Try to initialize Realm backend - may fail if native module missing
+  try {
+    // Ensure realm native module is available for this platform
+    const realmAvailable = await RealmInstaller.ensureRealmInstalled(context);
+    
+    if (!realmAvailable) {
+      Logger.warn('Realm module not available - extension functionality will be limited');
+      vscode.window.showWarningMessage(
+        'Realm Explorer: Native module not available for your platform. Commands will be registered but may not work.',
+        'Show Logs'
+      ).then(action => {
+        if (action === 'Show Logs') {
+          Logger.showOutput();
+        }
+      });
+    } else {
+      Logger.info('Realm module ready');
+    }
+
+    realmBackend = new RealmBackend();
+    activeRealmBackend = realmBackend;
+    schemaProvider = new RealmSchemaProvider(realmBackend);
+
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('realm-schema', schemaProvider));
+
+    context.subscriptions.push({
+      dispose: () => {
+        realmBackend?.closeRealm();
+        if (activeRealmBackend === realmBackend) {
+          activeRealmBackend = undefined;
+        }
+      },
+    });
+  } catch (error) {
+    Logger.error('Failed to initialize Realm backend:', error);
+    vscode.window.showErrorMessage(
+      `Realm Explorer: Failed to initialize. Realm module may be missing or incompatible with your platform. Error: ${toErrorMessage(error)}`,
+      'Show Logs'
+    ).then(action => {
+      if (action === 'Show Logs') {
+        Logger.showOutput();
+      }
+    });
+  }
 
   /** Shared callback: refreshes the schema tree + context key after any close path. */
   const onRealmClosed = () => {
-    schemaProvider.refresh();
+    schemaProvider?.refresh();
     vscode.commands.executeCommand('setContext', 'realm.isOpen', false);
   };
-
-  context.subscriptions.push(vscode.window.registerTreeDataProvider('realm-schema', schemaProvider));
-
-  context.subscriptions.push({
-    dispose: () => {
-      realmBackend.closeRealm();
-      if (activeRealmBackend === realmBackend) {
-        activeRealmBackend = undefined;
-      }
-    },
-  });
 
   context.subscriptions.push(
     vscode.commands.registerCommand('realm.openFile', async (uri?: vscode.Uri) => {
@@ -67,9 +90,13 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       if (filePath) {
+        if (!realmBackend) {
+          vscode.window.showErrorMessage('Realm Explorer: Backend not initialized. Realm module may be missing.');
+          return;
+        }
         try {
           await realmBackend.openRealm(filePath);
-          schemaProvider.refresh();
+          schemaProvider?.refresh();
           await vscode.commands.executeCommand('setContext', 'realm.isOpen', true);
           vscode.window.showInformationMessage(`Opened Realm: ${path.basename(filePath)}`);
           vscode.commands.executeCommand('realm.runQuery');
@@ -80,10 +107,14 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand('realm.refreshSchema', () => {
-      schemaProvider.refresh();
+      schemaProvider?.refresh();
     }),
 
     vscode.commands.registerCommand('realm.runQuery', (objectType?: string) => {
+      if (!realmBackend) {
+        vscode.window.showErrorMessage('Realm Explorer: Backend not initialized. Realm module may be missing.');
+        return;
+      }
       if (!realmBackend.isOpen()) {
         vscode.window.showErrorMessage('Please open a Realm file first.');
         return;
@@ -107,6 +138,10 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand('realm.closeFile', () => {
+      if (!realmBackend) {
+        vscode.window.showInformationMessage('Realm Explorer: Backend not initialized.');
+        return;
+      }
       if (!realmBackend.isOpen()) {
         vscode.window.showInformationMessage('No Realm file is currently open.');
         return;
