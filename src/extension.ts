@@ -6,6 +6,7 @@ import { toErrorMessage } from './shared/error-utils';
 import { Logger } from './services/logger';
 import { RealmBackend } from './services/realm-backend';
 import { RealmSchemaProvider } from './providers/SchemaProvider';
+import { RecentFilesProvider } from './providers/RecentFilesProvider';
 import { RealmPanel } from './webview/RealmPanel';
 import { RealmInstaller } from './services/realm-installer';
 
@@ -17,6 +18,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   let realmBackend: RealmBackend | undefined;
   let schemaProvider: RealmSchemaProvider | undefined;
+  const recentFilesProvider = new RecentFilesProvider(context.globalState);
 
   // Try to initialize Realm backend - may fail if native module missing
   try {
@@ -42,6 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
     schemaProvider = new RealmSchemaProvider(realmBackend);
 
     context.subscriptions.push(vscode.window.registerTreeDataProvider('realm-schema', schemaProvider));
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('realm-recent', recentFilesProvider));
 
     context.subscriptions.push({
       dispose: () => {
@@ -96,6 +99,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }
         try {
           await realmBackend.openRealm(filePath);
+          recentFilesProvider.push(filePath);
           schemaProvider?.refresh();
           await vscode.commands.executeCommand('setContext', 'realm.isOpen', true);
           vscode.window.showInformationMessage(`Opened Realm: ${path.basename(filePath)}`);
@@ -153,6 +157,19 @@ export async function activate(context: vscode.ExtensionContext) {
         RealmPanel.currentPanel.dispose();
       }
       vscode.window.showInformationMessage('Realm file closed.');
+    }),
+
+    vscode.commands.registerCommand('realm.openRecentFile', async (filePath: string) => {
+      await vscode.commands.executeCommand('realm.openFile', vscode.Uri.file(filePath));
+    }),
+
+    vscode.commands.registerCommand('realm.clearRecentFiles', () => {
+      recentFilesProvider.clear();
+      vscode.window.showInformationMessage('Recent files history cleared.');
+    }),
+
+    vscode.commands.registerCommand('realm.removeRecentFile', (item: { filePath: string }) => {
+      recentFilesProvider.remove(item.filePath);
     })
   );
 }
