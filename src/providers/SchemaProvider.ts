@@ -41,20 +41,31 @@ export class RealmSchemaProvider implements vscode.TreeDataProvider<SchemaItem> 
     }
 
     const schema = this.realmBackend.getSchema();
-    return schema.map((s) => {
-      const item = new SchemaItem(
-        s.name,
-        `${Object.keys(s.properties).length} fields`,
-        vscode.TreeItemCollapsibleState.Collapsed,
-        'objectType'
-      );
-      item.command = {
-        command: 'realm.runQuery',
-        title: 'Run Query',
-        arguments: [s.name],
-      };
-      return item;
-    });
+    return Promise.all(
+      schema.map(async (s) => {
+        let detail: string;
+        if (s.embedded) {
+          detail = 'embedded';
+        } else {
+          const { count } = await this.realmBackend.countQuery(s.name, '');
+          detail = `${count} object${count !== 1 ? 's' : ''}`;
+        }
+        const item = new SchemaItem(
+          s.name,
+          detail,
+          vscode.TreeItemCollapsibleState.Collapsed,
+          'objectType'
+        );
+        if (!s.embedded) {
+          item.command = {
+            command: 'realm.runQuery',
+            title: 'Run Query',
+            arguments: [s.name],
+          };
+        }
+        return item;
+      })
+    );
   }
 }
 

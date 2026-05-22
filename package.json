@@ -2,7 +2,7 @@
   "name": "realm-vscode",
   "displayName": "Realm Explorer",
   "description": "Inspect and query local Realm database files directly in VS Code with advanced filtering and visualization.",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "icon": "media/logo.png",
   "publisher": "IshwarDattMishra",
   "repository": {
@@ -47,6 +47,11 @@
           "id": "realm-schema",
           "name": "Schema Explorer",
           "type": "tree"
+        },
+        {
+          "id": "realm-recent",
+          "name": "Recent Files",
+          "type": "tree"
         }
       ]
     },
@@ -70,12 +75,31 @@
         "command": "realm.showLogs",
         "title": "Show Realm Explorer Logs",
         "icon": "$(output)"
+      },
+      {
+        "command": "realm.openRecentFile",
+        "title": "Open Recent Realm File",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "realm.clearRecentFiles",
+        "title": "Clear Recent Files",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "realm.removeRecentFile",
+        "title": "Remove from History",
+        "icon": "$(trash)"
       }
     ],
     "viewsWelcome": [
       {
         "view": "realm-schema",
         "contents": "No Realm database open.\n[Open Realm File](command:realm.openFile)\nOpen a .realm file to explore its schema and query data."
+      },
+      {
+        "view": "realm-recent",
+        "contents": "No recently opened files.\n[Open Realm File](command:realm.openFile)"
       }
     ],
     "menus": {
@@ -94,6 +118,23 @@
           "command": "realm.refreshSchema",
           "when": "view == realm-schema",
           "group": "navigation"
+        },
+        {
+          "command": "realm.openFile",
+          "when": "view == realm-recent",
+          "group": "navigation"
+        },
+        {
+          "command": "realm.clearRecentFiles",
+          "when": "view == realm-recent",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "realm.removeRecentFile",
+          "when": "view == realm-recent && viewItem == recentFile",
+          "group": "inline"
         }
       ]
     },
