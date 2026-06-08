@@ -14,15 +14,11 @@ function getVsCodeApi(): VsCodeApi {
     return acquireVsCodeApi();
   }
   
-  // Return a mock implementation for testing environments
+  // Return a no-op implementation for testing environments
   return {
-    postMessage: (msg: unknown) => {
-      console.log('Mock postMessage:', msg);
-    },
+    postMessage: () => {},
     getState: () => ({}),
-    setState: (state: unknown) => {
-      console.log('Mock setState:', state);
-    },
+    setState: () => {},
   };
 }
 

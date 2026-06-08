@@ -76,84 +76,84 @@ describe('RecentFilesProvider', () => {
     expect(provider.getChildren()).toEqual([]);
   });
 
-  it('push() adds a file to the front', () => {
-    provider.push('/path/to/a.realm');
+  it('push() adds a file to the front', async () => {
+    await provider.push('/path/to/a.realm');
     expect(provider.getHistory()).toEqual(['/path/to/a.realm']);
   });
 
-  it('push() prepends, so latest file appears first', () => {
-    provider.push('/a.realm');
-    provider.push('/b.realm');
+  it('push() prepends, so latest file appears first', async () => {
+    await provider.push('/a.realm');
+    await provider.push('/b.realm');
     expect(provider.getHistory()[0]).toBe('/b.realm');
     expect(provider.getHistory()[1]).toBe('/a.realm');
   });
 
-  it('push() deduplicates: re-opening moves entry to top', () => {
-    provider.push('/a.realm');
-    provider.push('/b.realm');
-    provider.push('/a.realm');
+  it('push() deduplicates: re-opening moves entry to top', async () => {
+    await provider.push('/a.realm');
+    await provider.push('/b.realm');
+    await provider.push('/a.realm');
     expect(provider.getHistory()).toEqual(['/a.realm', '/b.realm']);
   });
 
-  it('push() trims history to 10 entries', () => {
+  it('push() trims history to 10 entries', async () => {
     for (let i = 0; i < 12; i++) {
-      provider.push(`/file${i}.realm`);
+      await provider.push(`/file${i}.realm`);
     }
     expect(provider.getHistory()).toHaveLength(10);
     // Most recent should be first
     expect(provider.getHistory()[0]).toBe('/file11.realm');
   });
 
-  it('remove() deletes a specific entry', () => {
-    provider.push('/a.realm');
-    provider.push('/b.realm');
-    provider.remove('/a.realm');
+  it('remove() deletes a specific entry', async () => {
+    await provider.push('/a.realm');
+    await provider.push('/b.realm');
+    await provider.remove('/a.realm');
     expect(provider.getHistory()).toEqual(['/b.realm']);
   });
 
-  it('remove() is a no-op for unknown paths', () => {
-    provider.push('/a.realm');
-    provider.remove('/nonexistent.realm');
+  it('remove() is a no-op for unknown paths', async () => {
+    await provider.push('/a.realm');
+    await provider.remove('/nonexistent.realm');
     expect(provider.getHistory()).toEqual(['/a.realm']);
   });
 
-  it('clear() empties the full history', () => {
-    provider.push('/a.realm');
-    provider.push('/b.realm');
-    provider.clear();
+  it('clear() empties the full history', async () => {
+    await provider.push('/a.realm');
+    await provider.push('/b.realm');
+    await provider.clear();
     expect(provider.getHistory()).toEqual([]);
   });
 
-  it('fires onDidChangeTreeData on push()', () => {
+  it('fires onDidChangeTreeData on push()', async () => {
     const listener = vi.fn();
     provider.onDidChangeTreeData(listener);
-    provider.push('/a.realm');
+    await provider.push('/a.realm');
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('fires onDidChangeTreeData on remove()', () => {
+  it('fires onDidChangeTreeData on remove()', async () => {
     const listener = vi.fn();
     provider.onDidChangeTreeData(listener);
-    provider.remove('/a.realm');
+    await provider.remove('/a.realm');
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('fires onDidChangeTreeData on clear()', () => {
+  it('fires onDidChangeTreeData on clear()', async () => {
     const listener = vi.fn();
     provider.onDidChangeTreeData(listener);
-    provider.clear();
+    await provider.clear();
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('getChildren() returns one RecentFileItem per history entry', () => {
-    provider.push('/data/mydb.realm');
+  it('getChildren() returns one RecentFileItem per history entry', async () => {
+    await provider.push('/data/mydb.realm');
     const children = provider.getChildren();
     expect(children).toHaveLength(1);
     expect(children[0]).toBeInstanceOf(RecentFileItem);
   });
 
-  it('persists history across provider instances (same memento)', () => {
-    provider.push('/a.realm');
+  it('persists history across provider instances (same memento)', async () => {
+    await provider.push('/a.realm');
     const provider2 = new RecentFilesProvider(memento);
     expect(provider2.getHistory()).toEqual(['/a.realm']);
   });

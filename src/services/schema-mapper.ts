@@ -25,8 +25,7 @@ export function mapRealmSchemaToInfo(realm: Realm, logger: ILogger): RealmSchema
       return {
         name: s.name,
         primaryKey: s.primaryKey,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        embedded: (s as any).embedded === true,
+        embedded: (s as { embedded?: boolean }).embedded === true,
         properties,
       };
     });

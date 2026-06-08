@@ -47,8 +47,12 @@ export class RealmSchemaProvider implements vscode.TreeDataProvider<SchemaItem> 
         if (s.embedded) {
           detail = 'embedded';
         } else {
-          const { count } = await this.realmBackend.countQuery(s.name, '');
-          detail = `${count} object${count !== 1 ? 's' : ''}`;
+          try {
+            const { count } = await this.realmBackend.countQuery(s.name, '');
+            detail = `${count} object${count !== 1 ? 's' : ''}`;
+          } catch {
+            detail = 'error';
+          }
         }
         const item = new SchemaItem(
           s.name,

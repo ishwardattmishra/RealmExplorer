@@ -7,7 +7,12 @@ describe('toErrorMessage', () => {
     expect(toErrorMessage(new Error('x'))).toBe('x');
   });
 
-  it('returns fallback for non-Error', () => {
-    expect(toErrorMessage('oops')).toBe('Unknown error');
+  it('returns the string itself for a thrown string', () => {
+    expect(toErrorMessage('oops')).toBe('oops');
+  });
+
+  it('returns String() coercion for other types', () => {
+    expect(toErrorMessage(42)).toBe('42');
+    expect(toErrorMessage(null)).toBe('null');
   });
 });

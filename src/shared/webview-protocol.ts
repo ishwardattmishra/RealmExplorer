@@ -44,9 +44,19 @@ export type WebviewToExtensionMessage =
       value: unknown;
     }
   | {
+      command: 'updateRows';
+      objectType: string;
+      updates: Array<{ primaryKey: unknown; field: string; value: unknown }>;
+    }
+  | {
       command: 'deleteRow';
       objectType: string;
       primaryKey: unknown;
+    }
+  | {
+      command: 'exportData';
+      objectType: string;
+      data: Record<string, unknown>[];
     };
 
 export type WebviewCommand = WebviewToExtensionMessage['command'];
@@ -64,7 +74,9 @@ export function isWebviewToExtensionMessage(data: unknown): data is WebviewToExt
     'reopenRealm',
     'insertRow',
     'updateRow',
+    'updateRows',
     'deleteRow',
+    'exportData',
   ];
   if (!validCommands.includes(cmd as WebviewCommand)) {
     return false;
@@ -83,9 +95,17 @@ export function isWebviewToExtensionMessage(data: unknown): data is WebviewToExt
     const o = data as { objectType?: unknown; primaryKey?: unknown; field?: unknown };
     return typeof o.objectType === 'string' && 'primaryKey' in (data as object) && typeof o.field === 'string';
   }
+  if (cmd === 'updateRows') {
+    const o = data as { objectType?: unknown; updates?: unknown };
+    return typeof o.objectType === 'string' && Array.isArray(o.updates);
+  }
   if (cmd === 'deleteRow') {
     const o = data as { objectType?: unknown };
     return typeof o.objectType === 'string' && 'primaryKey' in (data as object);
+  }
+  if (cmd === 'exportData') {
+    const o = data as { objectType?: unknown; data?: unknown };
+    return typeof o.objectType === 'string' && Array.isArray(o.data);
   }
   const o = data as { objectType?: unknown; filter?: unknown; args?: unknown };
   if (typeof o.objectType !== 'string' || typeof o.filter !== 'string') {

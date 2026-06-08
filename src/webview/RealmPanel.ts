@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 
 import type { IRealmBackend } from '../services/irealm-backend';
 import type { ILogger } from '../services/ilogger';
-import { createLoggerFacade, createWebviewNonce } from '../services/logger';
+import { createLoggerFacade } from '../services/logger';
+import { createWebviewNonce } from '../shared/crypto-utils';
 import { dispatchWebviewMessage } from './webview-message-dispatch';
 
 export class RealmPanel {
@@ -12,6 +13,7 @@ export class RealmPanel {
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
   private readonly _logger: ILogger;
+  private _backend: IRealmBackend | null = null;
   private _disposables: vscode.Disposable[] = [];
 
   public static createOrShow(
@@ -63,17 +65,33 @@ export class RealmPanel {
     this._panel = panel;
     this._extensionUri = extensionUri;
     this._logger = logger;
+    this._backend = backend;
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
     this._panel.webview.onDidReceiveMessage(
       async (message: unknown) => {
+        if (!this._backend) {
+          this._logger.warn('Received webview message after backend was disposed');
+          return;
+        }
         this._logger.info(`Received message from webview`, message);
         await dispatchWebviewMessage(message, {
           postMessage: (msg) => this._panel.webview.postMessage(msg),
-          backend,
+          backend: this._backend,
           logger: this._logger,
           onRealmClosed: this.onRealmClosed,
+          onExportData: async (objectType, data) => {
+            const uri = await vscode.window.showSaveDialog({
+              defaultUri: vscode.Uri.file(`realm-${objectType}.json`),
+              filters: { 'JSON Files': ['json'] },
+            });
+            if (uri) {
+              const content = Buffer.from(JSON.stringify(data, null, 2), 'utf-8');
+              await vscode.workspace.fs.writeFile(uri, content);
+              vscode.window.showInformationMessage(`Exported ${data.length} rows to ${uri.fsPath}`);
+            }
+          },
         });
       },
       null,
@@ -85,6 +103,7 @@ export class RealmPanel {
 
   public dispose() {
     RealmPanel.currentPanel = undefined;
+    this._backend = null; // release backend reference for GC
     this._panel.dispose();
     while (this._disposables.length) {
       const x = this._disposables.pop();

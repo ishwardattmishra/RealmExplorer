@@ -7,6 +7,7 @@ import { FilterPanel } from './components/FilterPanel';
 import { DataTable } from './components/DataTable';
 import { Header } from './components/Header';
 import { Pagination } from './components/Pagination';
+import { PendingChangesBar } from './components/PendingChangesBar';
 import { Toolbar } from './components/Toolbar';
 import { useRealmQuery } from './hooks/useRealmQuery';
 import { useVSCodeMessage } from './hooks/useVSCodeMessage';
@@ -26,14 +27,19 @@ const App: React.FC = () => {
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
 
-  // Edit mode & CRUD state
-  const [editMode, setEditMode] = useState<boolean>(false);
+  // CRUD state
   const [isOpen, setIsOpen] = useState<boolean>(
     () => !!(globalThis.INITIAL_SCHEMA && (globalThis.INITIAL_SCHEMA as RealmSchemaInfo[]).length > 0)
   );
   /** null = closed, null row = adding new, non-null row = editing */
   const [editModalRow, setEditModalRow] = useState<RealmRow | null | undefined>(undefined);
   const [mutationStatus, setMutationStatus] = useState<string | null>(null);
+  /** Track recently-edited cells for animation: `${pkValue}-${fieldName}` */
+  const [recentlyEdited, setRecentlyEdited] = useState<Set<string>>(new Set());
+  
+  /** Map from pk string → { field: value } */
+  const [pendingChanges, setPendingChanges] = useState<Map<string, Record<string, unknown>>>(new Map());
+  const [applyingChanges, setApplyingChanges] = useState(false);
 
   const { loading, setLoading, error, setError, results, setResults, executeQuery } = useRealmQuery();
 
@@ -93,7 +99,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (objectType) {
-      const timer = setTimeout(() => triggerQuery(false), 100);
+      const timer = setTimeout(() => triggerQuery(false), 300);
       return () => clearTimeout(timer);
     }
   }, [objectType, currentPage, pageSize, triggerQuery]);
@@ -119,25 +125,38 @@ const App: React.FC = () => {
       setSchema(newSchema);
       setIsOpen(newSchema.length > 0);
     },
+    onCount: () => {
+      // Count-only queries complete here; clear loading state.
+      setLoading(false);
+    },
     onRealmClosed: () => {
       setSchema([]);
       setObjectType('');
       setResults(null);
       setSelectedRow(null);
-      setEditMode(false);
       setIsOpen(false);
       setMutationStatus(null);
+      setRecentlyEdited(new Set());
+      setPendingChanges(new Map());
+      setApplyingChanges(false);
     },
     onMutationSuccess: (action) => {
-      const labels = { insert: 'Row added', update: 'Row updated', delete: 'Row deleted' };
+      const labels = { insert: 'Row inserted successfully', update: 'Updates applied successfully', delete: 'Row deleted successfully' };
       setMutationStatus(labels[action]);
       setTimeout(() => setMutationStatus(null), 3000);
+      
+      if (action === 'update') {
+        setPendingChanges(new Map());
+        setApplyingChanges(false);
+      }
+
       // Refresh results
       setIsInitialLoad(false);
       triggerQuery(false);
     },
     onMutationError: (msg) => {
       setError(msg);
+      setApplyingChanges(false);
     },
   });
 
@@ -164,24 +183,18 @@ const App: React.FC = () => {
     if (!results) {
       return;
     }
-    const dataStr = JSON.stringify(results.data, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `realm-${objectType}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    // Send export data to extension host — blob downloads may be blocked
+    // by the webview sandbox CSP, so the extension handles file save via
+    // vscode.workspace.fs.writeFile + vscode.window.showSaveDialog.
+    vscode.postMessage({
+      command: 'exportData',
+      objectType,
+      data: results.data,
+    });
   };
 
   const handleCloseDB = () => {
     vscode.postMessage({ command: 'closeRealm' });
-  };
-
-  const handleToggleEditMode = () => {
-    const nextEdit = !editMode;
-    setEditMode(nextEdit);
-    vscode.postMessage({ command: 'reopenRealm', writeable: nextEdit });
   };
 
   const handleAddRow = () => {
@@ -202,6 +215,62 @@ const App: React.FC = () => {
     vscode.postMessage({ command: 'deleteRow', objectType, primaryKey });
   };
 
+  const handleInlineEdit = useCallback((row: RealmRow, field: string, value: unknown) => {
+    const pk = currentSchema?.primaryKey;
+    const primaryKey = pk ? row[pk] : undefined;
+    if (primaryKey === undefined) {
+      setError('Cannot edit: this object type has no primary key.');
+      return;
+    }
+    setPendingChanges((prev) => {
+      const next = new Map(prev);
+      const pkString = String(primaryKey);
+      const rowChanges = next.get(pkString) || {};
+      next.set(pkString, { ...rowChanges, [field]: value });
+      return next;
+    });
+  }, [currentSchema, setError]);
+
+  const handleApplyPendingChanges = () => {
+    setApplyingChanges(true);
+    const updates: Array<{ primaryKey: unknown; field: string; value: unknown }> = [];
+    
+    // We need original PK types. We can extract them from the results list since we only edit visible rows.
+    if (!results || !currentSchema?.primaryKey) {
+      setApplyingChanges(false);
+      return;
+    }
+    const pkProp = currentSchema.primaryKey;
+    
+    pendingChanges.forEach((fields, pkString) => {
+      // Find the row to get the actual primary key object if it's an ObjectId or similar
+      const row = results.data.find(r => String(r[pkProp]) === pkString);
+      if (row) {
+        const primaryKey = row[pkProp];
+        Object.entries(fields).forEach(([field, value]) => {
+          updates.push({ primaryKey, field, value });
+          
+          // Trigger animations
+          const editKey = `${pkString}-${field}`;
+          setRecentlyEdited(prev => new Set(prev).add(editKey));
+          setTimeout(() => {
+            setRecentlyEdited(prev => {
+              const next = new Set(prev);
+              next.delete(editKey);
+              return next;
+            });
+          }, 2000);
+        });
+      }
+    });
+
+    vscode.postMessage({ command: 'updateRows', objectType, updates });
+  };
+
+  const handleDiscardPendingChanges = () => {
+    setPendingChanges(new Map());
+  };
+
   const handleModalClose = () => {
     setEditModalRow(undefined); // undefined = modal closed
   };
@@ -220,8 +289,6 @@ const App: React.FC = () => {
         }
         onClearAllColumns={() => setVisibleColumns(new Set())}
         onExport={handleExport}
-        editMode={editMode}
-        onToggleEditMode={handleToggleEditMode}
         onCloseDB={handleCloseDB}
         isOpen={isOpen}
       />
@@ -239,7 +306,6 @@ const App: React.FC = () => {
         onLimitChange={setLimit}
         onRunQuery={() => triggerQuery(false)}
         loading={loading}
-        editMode={editMode}
         onAddRow={handleAddRow}
       />
 
@@ -256,7 +322,8 @@ const App: React.FC = () => {
 
       {mutationStatus && (
         <div className="mutation-toast" role="status" aria-live="polite">
-          ✅ {mutationStatus}
+          <span className="mutation-toast-icon">✓</span>
+          {mutationStatus}
         </div>
       )}
 
@@ -269,9 +336,11 @@ const App: React.FC = () => {
           onSelectRow={setSelectedRow}
           loading={loading}
           error={error}
-          editMode={editMode}
           onEditRow={handleEditRow}
           onDeleteRow={handleDeleteRow}
+          onInlineEdit={handleInlineEdit}
+          pendingChanges={pendingChanges}
+          recentlyEdited={recentlyEdited}
         />
 
         {selectedRow && <DetailsPanel selectedRow={selectedRow} onClose={() => setSelectedRow(null)} />}
@@ -282,6 +351,13 @@ const App: React.FC = () => {
         currentPage={currentPage}
         onPageChange={setCurrentPage}
         pageSize={pageSize}
+      />
+
+      <PendingChangesBar 
+        pendingChanges={pendingChanges}
+        onApply={handleApplyPendingChanges}
+        onDiscard={handleDiscardPendingChanges}
+        applying={applyingChanges}
       />
 
       {isModalOpen && currentSchema && (

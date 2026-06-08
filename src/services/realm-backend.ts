@@ -7,7 +7,7 @@ import { RealmSession } from './realm-session';
 import { mapRealmSchemaToInfo } from './schema-mapper';
 import { TypeCoercer } from './type-coercer';
 
-export type { QueryResult, RealmFieldInfo, RealmSchemaInfo, RealmRow } from '../shared/types';
+
 
 /**
  * Facade over session, schema mapping, type coercion, and query execution.
@@ -18,6 +18,8 @@ export class RealmBackend implements IRealmBackend {
   private readonly queryExecutor: QueryExecutor;
   /** Last opened file path, needed for reopenRealm */
   private currentFilePath: string | undefined;
+  /** Cached schema to avoid re-reading on every getSchema() / CRUD call */
+  private cachedSchema: RealmSchemaInfo[] | undefined;
 
   constructor(private readonly logger: ILogger = createLoggerFacade()) {
     this.typeCoercer = new TypeCoercer(this.logger);
@@ -30,6 +32,7 @@ export class RealmBackend implements IRealmBackend {
       this.logger.info('Calling Realm.open...');
       await this.session.open(filePath, readOnly);
       this.currentFilePath = filePath;
+      this.cachedSchema = undefined; // invalidate cache
       this.logger.info('Realm opened successfully');
 
       const schema = this.getSchema();
@@ -54,13 +57,23 @@ export class RealmBackend implements IRealmBackend {
       return [];
     }
 
+    if (this.cachedSchema) {
+      return this.cachedSchema;
+    }
+
     try {
       const realm = this.session.getRealmOrThrow();
-      return mapRealmSchemaToInfo(realm, this.logger);
+      this.cachedSchema = mapRealmSchemaToInfo(realm, this.logger);
+      return this.cachedSchema;
     } catch (error) {
       this.logger.error('Error reading schema:', error);
       return [];
     }
+  }
+
+  /** Look up cached schema for a single object type. */
+  private getSchemaForType(objectType: string): RealmSchemaInfo | undefined {
+    return this.getSchema().find((s) => s.name === objectType);
   }
 
   async executeQuery(
@@ -97,6 +110,7 @@ export class RealmBackend implements IRealmBackend {
       return;
     }
     this.logger.info('Closing Realm');
+    this.cachedSchema = undefined; // invalidate cache
     try {
       this.session.close();
     } catch (error) {
@@ -108,8 +122,16 @@ export class RealmBackend implements IRealmBackend {
     return this.session.isOpen();
   }
 
+  invalidateSchemaCache(): void {
+    this.cachedSchema = undefined;
+  }
+
   // ── CRUD ────────────────────────────────────────────────────────────────────
 
+  /**
+   * Insert a new row. Declared async for IRealmBackend interface compliance;
+   * the underlying realm.write() is synchronous.
+   */
   async insertRow(objectType: string, data: Record<string, unknown>): Promise<void> {
     this.logger.info(`Inserting row into ${objectType}`, data);
     const realm = this.session.getRealmOrThrow();
@@ -118,6 +140,10 @@ export class RealmBackend implements IRealmBackend {
     });
   }
 
+  /**
+   * Update a single field on an existing row by primary key. Declared async for
+   * IRealmBackend interface compliance; the underlying realm.write() is synchronous.
+   */
   async updateRow(
     objectType: string,
     primaryKey: unknown,
@@ -126,7 +152,7 @@ export class RealmBackend implements IRealmBackend {
   ): Promise<void> {
     this.logger.info(`Updating ${objectType}[pk=${String(primaryKey)}].${field}`);
     const realm = this.session.getRealmOrThrow();
-    const schema = this.getSchema().find((s) => s.name === objectType);
+    const schema = this.getSchemaForType(objectType);
     if (!schema?.primaryKey) {
       throw new Error(`Cannot update: "${objectType}" has no primary key.`);
     }
@@ -139,10 +165,38 @@ export class RealmBackend implements IRealmBackend {
     });
   }
 
+  /**
+   * Update multiple fields across multiple rows in a single write transaction.
+   */
+  async updateRows(
+    objectType: string,
+    updates: Array<{ primaryKey: unknown; field: string; value: unknown }>
+  ): Promise<void> {
+    this.logger.info(`Updating ${updates.length} fields in ${objectType}`);
+    const realm = this.session.getRealmOrThrow();
+    const schema = this.getSchemaForType(objectType);
+    if (!schema?.primaryKey) {
+      throw new Error(`Cannot update: "${objectType}" has no primary key.`);
+    }
+    realm.write(() => {
+      for (const update of updates) {
+        const obj = realm.objectForPrimaryKey(objectType, update.primaryKey as Parameters<typeof realm.objectForPrimaryKey>[1]);
+        if (!obj) {
+          throw new Error(`Object not found: ${objectType}[pk=${String(update.primaryKey)}]`);
+        }
+        (obj as Record<string, unknown>)[update.field] = update.value;
+      }
+    });
+  }
+
+  /**
+   * Delete a row by primary key. Declared async for IRealmBackend interface compliance;
+   * the underlying realm.write() is synchronous.
+   */
   async deleteRow(objectType: string, primaryKey: unknown): Promise<void> {
     this.logger.info(`Deleting ${objectType}[pk=${String(primaryKey)}]`);
     const realm = this.session.getRealmOrThrow();
-    const schema = this.getSchema().find((s) => s.name === objectType);
+    const schema = this.getSchemaForType(objectType);
     if (!schema?.primaryKey) {
       throw new Error(`Cannot delete: "${objectType}" has no primary key.`);
     }

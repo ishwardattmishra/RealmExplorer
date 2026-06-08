@@ -10,8 +10,6 @@ interface HeaderProps {
   onSelectAllColumns: () => void;
   onClearAllColumns: () => void;
   onExport: () => void;
-  editMode: boolean;
-  onToggleEditMode: () => void;
   onCloseDB: () => void;
   isOpen: boolean;
 }
@@ -27,8 +25,6 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectAllColumns,
   onClearAllColumns,
   onExport,
-  editMode,
-  onToggleEditMode,
   onCloseDB,
   isOpen,
 }) => {
@@ -91,11 +87,6 @@ export const Header: React.FC<HeaderProps> = ({
         ) : null}
         <h2>Realm Explorer</h2>
         {results && <span className="count-badge">{results.totalCount} objects</span>}
-        {editMode && (
-          <span className="edit-mode-badge" aria-label="Edit mode active">
-            ✏ Edit Mode
-          </span>
-        )}
       </div>
       <div className="action-section" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
         <div className="popover-container" ref={columnPickerRef}>
@@ -154,32 +145,6 @@ export const Header: React.FC<HeaderProps> = ({
         <button type="button" className="btn btn-secondary" onClick={onExport} disabled={!results}>
           Export JSON
         </button>
-
-        {isOpen && (
-          <button
-            type="button"
-            id="realm-edit-mode-btn"
-            className={`btn ${editMode ? 'btn-edit-active' : 'btn-secondary'}`}
-            onClick={onToggleEditMode}
-            title={editMode ? 'Switch back to read-only mode' : 'Enable edit mode (reopens DB for writing)'}
-          >
-            {editMode ? (
-              <>
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                  <path d="M13.5 1a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM11 2.5a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0zm-1.44.44L2 10.5V14h3.5l7.56-7.56a3.5 3.5 0 0 1-3.5-3.5zM3 11.5l6-6 .94.94-6 6H3v-.94z"/>
-                </svg>
-                Read-Only
-              </>
-            ) : (
-              <>
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                  <path d="M13.23 1h-1.46L3.52 9.25l-.16.22L1 13.59 2.41 15l4.12-2.36.22-.16L15 4.23V2.77L13.23 1zM2.41 13.59l1.51-3 1.45 1.45-2.96 1.55zm3.83-2.06L4.47 9.76l8-7.43 1.37 1.37-7.6 7.83z"/>
-                </svg>
-                Edit Mode
-              </>
-            )}
-          </button>
-        )}
 
         {isOpen && (
           <span className="close-db-separator" aria-hidden="true" />

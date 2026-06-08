@@ -24,7 +24,9 @@ describe('DataTable', () => {
     selectedRow: null,
     onSelectRow: vi.fn(),
     loading: false,
-    error: null
+    error: null,
+    onEditRow: vi.fn(),
+    onDeleteRow: vi.fn(),
   };
 
   it('should render table headers and rows', () => {

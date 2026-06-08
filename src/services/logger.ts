@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { inspect } from 'node:util';
@@ -10,6 +9,13 @@ import type { ILogger } from './ilogger';
 export class Logger {
   private static logPath: string | undefined;
   private static outputChannel: vscode.OutputChannel | undefined;
+
+  /** Buffered log lines awaiting async flush to disk. */
+  private static writeBuffer: string[] = [];
+  /** Max buffer size in characters before an immediate flush is scheduled. */
+  private static readonly BUFFER_CHAR_LIMIT = 4096;
+  /** Interval handle for periodic flushing. */
+  private static flushTimer: ReturnType<typeof setInterval> | undefined;
 
   public static initialize(extensionContext: vscode.ExtensionContext) {
     this.outputChannel = vscode.window.createOutputChannel('Realm Explorer');
@@ -23,10 +29,19 @@ export class Logger {
       this.logPath = path.join(process.cwd(), 'realm-explorer.log');
     }
 
+    // Periodic flush every 500ms
+    this.flushTimer = setInterval(() => void this.flush(), 500);
+
     this.info(`Logger initialized. Log file: ${this.logPath}`);
   }
 
   public static dispose(): void {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = undefined;
+    }
+    // Final synchronous flush to avoid losing last messages
+    this.flushSync();
     this.outputChannel?.dispose();
     this.outputChannel = undefined;
     this.logPath = undefined;
@@ -74,11 +89,42 @@ export class Logger {
     }
 
     if (this.logPath) {
-      try {
-        fs.appendFileSync(this.logPath, formattedMessage + '\n');
-      } catch (err) {
-        console.error('Failed to write to log file:', err);
+      this.writeBuffer.push(formattedMessage + '\n');
+      // If buffer is large, schedule an immediate async flush
+      const bufferSize = this.writeBuffer.reduce((sum, s) => sum + s.length, 0);
+      if (bufferSize >= this.BUFFER_CHAR_LIMIT) {
+        void this.flush();
       }
+    }
+  }
+
+  /** Asynchronously flush the write buffer to disk. */
+  public static async flush(): Promise<void> {
+    if (this.writeBuffer.length === 0 || !this.logPath) {
+      return;
+    }
+    // Swap the buffer atomically so new writes go to a fresh array
+    // while the old batch is being written — no lines are dropped.
+    const batch = this.writeBuffer.join('');
+    this.writeBuffer = [];
+    try {
+      await fs.promises.appendFile(this.logPath, batch);
+    } catch (err) {
+      console.error('Failed to write to log file:', err);
+    }
+  }
+
+  /** Synchronous flush — only used during dispose() to guarantee final writes. */
+  private static flushSync(): void {
+    if (this.writeBuffer.length === 0 || !this.logPath) {
+      return;
+    }
+    const batch = this.writeBuffer.join('');
+    this.writeBuffer = [];
+    try {
+      fs.appendFileSync(this.logPath, batch);
+    } catch (err) {
+      console.error('Failed to write to log file during dispose:', err);
     }
   }
 
@@ -100,9 +146,4 @@ export function createLoggerFacade(): ILogger {
     error: (message, ...args) => Logger.error(message, ...args),
     warn: (message, ...args) => Logger.warn(message, ...args),
   };
-}
-
-/** Random nonce for webview Content-Security-Policy (extension host only). */
-export function createWebviewNonce(): string {
-  return crypto.randomBytes(16).toString('base64');
 }

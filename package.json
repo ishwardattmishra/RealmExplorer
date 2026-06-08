@@ -90,6 +90,11 @@
         "command": "realm.removeRecentFile",
         "title": "Remove from History",
         "icon": "$(trash)"
+      },
+      {
+        "command": "realm.closeFile",
+        "title": "Close Realm File",
+        "icon": "$(close)"
       }
     ],
     "viewsWelcome": [

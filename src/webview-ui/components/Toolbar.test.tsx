@@ -16,7 +16,8 @@ describe('Toolbar', () => {
     limit: 1000,
     onLimitChange: vi.fn(),
     onRunQuery: vi.fn(),
-    loading: false
+    loading: false,
+    onAddRow: vi.fn(),
   };
 
   it('should render schema options', () => {

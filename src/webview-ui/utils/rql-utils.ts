@@ -31,6 +31,8 @@ export function buildParameterizedRql(
         value = row.value.toLowerCase() === 'true' || row.value === '1';
       } else if (fieldType === 'date') {
         try {
+          // Replace '@' with 'T' to accept "2024-01-01@12:00:00" as a common
+          // user-friendly alternative to ISO-8601's 'T' separator.
           const date = new Date(row.value.replace('@', 'T'));
           if (!isNaN(date.getTime())) {
             value = { $type: 'date', value: date.toISOString() };

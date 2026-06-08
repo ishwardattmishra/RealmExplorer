@@ -18,7 +18,12 @@ export class RealmInstaller {
   static async ensureRealmInstalled(context: vscode.ExtensionContext): Promise<boolean> {
     // Check if realm is already available
     try {
-      require.resolve('realm');
+      // Use require.resolve if available (CJS), fall back to dynamic import (ESM)
+      if (typeof require !== 'undefined' && typeof require.resolve === 'function') {
+        require.resolve('realm');
+      } else {
+        await import('realm');
+      }
       Logger.info('Realm module is available');
       return true;
     } catch {
@@ -70,16 +75,27 @@ export class RealmInstaller {
         async (progress) => {
           progress.report({ message: 'Installing native module for your platform...' });
 
+          const execAsync = (cmd: string, opts: child_process.ExecOptions): Promise<string> =>
+            new Promise((resolve, reject) => {
+              child_process.exec(cmd, opts, (error, stdout, stderr) => {
+                if (error) {
+                  Logger.error(`Command failed: ${cmd}`, { stderr: stderr?.toString() });
+                  reject(error);
+                  return;
+                }
+                resolve(stdout?.toString() ?? '');
+              });
+            });
+
           // Run prebuild-install to download platform-specific binary
           const command = 'npm run install --prefix node_modules/realm';
-          const options = {
+          const options: child_process.ExecOptions = {
             cwd: extensionPath,
-            stdio: 'pipe' as const,
             env: { ...process.env },
           };
 
           try {
-            child_process.execSync(command, options);
+            await execAsync(command, options);
             Logger.info('Realm installation completed successfully');
             return true;
           } catch (error) {
@@ -89,7 +105,7 @@ export class RealmInstaller {
             try {
               progress.report({ message: 'Trying alternative installation method...' });
               const altCommand = 'npx prebuild-install --runtime napi';
-              child_process.execSync(altCommand, { ...options, cwd: realmPath });
+              await execAsync(altCommand, { ...options, cwd: realmPath });
               Logger.info('Realm installation completed via alternative method');
               return true;
             } catch (altError) {

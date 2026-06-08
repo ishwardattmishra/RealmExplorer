@@ -1,6 +1,14 @@
 import { render, fireEvent, act } from '@testing-library/preact';
 import App from './App';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const mockPostMessage = vi.fn();
+vi.mock('./vscode', () => ({
+  vscode: {
+    postMessage: (...args: unknown[]) => mockPostMessage(...args),
+  },
+}));
+
 // Mock hooks
 vi.mock('./hooks/useVSCodeMessage', () => ({
   useVSCodeMessage: vi.fn(({ onSelectObjectType, onResults, onError, onSchema }) => {
@@ -31,8 +39,6 @@ describe('App', () => {
       { name: 'User', properties: { name: { type: 'string' }, age: { type: 'int' } } }
     ];
     (globalThis as any).INITIAL_TYPE = 'User';
-    // Mock URL and Blob for export test
-    globalThis.URL.createObjectURL = vi.fn(() => 'blob:url');
   });
 
   it('should render main components', () => {
@@ -88,6 +94,8 @@ describe('App', () => {
         fireEvent.click(exportBtn);
     });
     
-    expect(globalThis.URL.createObjectURL).toHaveBeenCalled();
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ command: 'exportData', objectType: 'User' })
+    );
   });
 });
