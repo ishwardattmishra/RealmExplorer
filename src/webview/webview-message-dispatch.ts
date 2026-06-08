@@ -1,6 +1,8 @@
-import type { ExtensionToWebviewMessage } from '../shared/webview-protocol';
-import { isWebviewToExtensionMessage } from '../shared/webview-protocol';
-import type { WebviewToExtensionMessage } from '../shared/webview-protocol';
+import {
+  isWebviewToExtensionMessage,
+  type ExtensionToWebviewMessage,
+  type WebviewToExtensionMessage,
+} from '../shared/webview-protocol';
 import { toErrorMessage } from '../shared/error-utils';
 import type { IRealmBackend } from '../services/irealm-backend';
 import type { ILogger } from '../services/ilogger';
@@ -11,6 +13,8 @@ export type PanelHandlerContext = {
   logger: ILogger;
   /** Called after the realm is closed so the extension host can refresh the schema tree and context key. */
   onRealmClosed?: () => void;
+  /** Called when the webview requests a JSON data export. */
+  onExportData?: (objectType: string, data: Record<string, unknown>[]) => void;
 };
 
 type HandlerFn = (message: WebviewToExtensionMessage, ctx: PanelHandlerContext) => Promise<void>;
@@ -104,6 +108,18 @@ const WEBVIEW_MESSAGE_HANDLERS: Record<WebviewToExtensionMessage['command'], Han
     }
   },
 
+  updateRows: async (message, ctx) => {
+    const msg = message as Extract<WebviewToExtensionMessage, { command: 'updateRows' }>;
+    try {
+      await ctx.backend.updateRows(msg.objectType, msg.updates);
+      ctx.postMessage({ command: 'mutationSuccess', action: 'update' });
+    } catch (err) {
+      const errorMessage = toErrorMessage(err);
+      ctx.logger.error(`Error updating rows: ${errorMessage}`);
+      ctx.postMessage({ command: 'mutationError', message: errorMessage });
+    }
+  },
+
   deleteRow: async (message, ctx) => {
     const msg = message as Extract<WebviewToExtensionMessage, { command: 'deleteRow' }>;
     try {
@@ -115,6 +131,12 @@ const WEBVIEW_MESSAGE_HANDLERS: Record<WebviewToExtensionMessage['command'], Han
       ctx.postMessage({ command: 'mutationError', message: errorMessage });
     }
   },
+
+  exportData: async (message, ctx) => {
+    const msg = message as Extract<WebviewToExtensionMessage, { command: 'exportData' }>;
+    ctx.logger.info(`Export requested for ${msg.objectType} (${msg.data.length} rows)`);
+    ctx.onExportData?.(msg.objectType, msg.data);
+  },
 };
 
 export async function dispatchWebviewMessage(raw: unknown, ctx: PanelHandlerContext): Promise<void> {
@@ -124,5 +146,11 @@ export async function dispatchWebviewMessage(raw: unknown, ctx: PanelHandlerCont
   }
   const message = raw;
   const handler = WEBVIEW_MESSAGE_HANDLERS[message.command];
-  await handler(message, ctx);
+  try {
+    await handler(message, ctx);
+  } catch (err) {
+    const errorMessage = toErrorMessage(err);
+    ctx.logger.error(`Unhandled error in webview handler '${message.command}': ${errorMessage}`);
+    ctx.postMessage({ command: 'error', message: `Internal error: ${errorMessage}` });
+  }
 }

@@ -25,6 +25,8 @@ describe('Header', () => {
     onSelectAllColumns: vi.fn(),
     onClearAllColumns: vi.fn(),
     onExport: vi.fn(),
+    onCloseDB: vi.fn(),
+    isOpen: false,
   };
 
   it('should close column picker when clicking outside', async () => {

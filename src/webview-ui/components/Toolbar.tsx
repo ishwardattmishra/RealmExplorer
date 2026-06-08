@@ -12,7 +12,6 @@ interface ToolbarProps {
   onLimitChange: (limit: number) => void;
   onRunQuery: () => void;
   loading: boolean;
-  editMode: boolean;
   onAddRow: () => void;
 }
 
@@ -26,7 +25,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onLimitChange,
   onRunQuery,
   loading,
-  editMode,
   onAddRow,
 }) => {
   return (
@@ -86,18 +84,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         >
           Run Query
         </button>
-        {editMode && (
-          <button
-            type="button"
-            id="realm-add-row-btn"
-            className="btn btn-success"
-            onClick={onAddRow}
-            disabled={!objectType}
-            title="Add a new row to the current object type"
-          >
-            + Add Row
-          </button>
-        )}
+        <button
+          type="button"
+          id="realm-add-row-btn"
+          className="btn btn-success"
+          onClick={onAddRow}
+          disabled={!objectType}
+          title="Add a new row to the current object type"
+        >
+          + Add Row
+        </button>
       </div>
     </section>
   );

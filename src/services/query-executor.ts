@@ -20,17 +20,12 @@ export class QueryExecutor {
     objectType: string,
     filter: string,
     args: unknown[] = [],
-    limit?: number
   ) {
     const processedArgs = this.typeCoercer.coerceArgs(args);
 
     let results = realm.objects(objectType);
     if (filter) {
       results = results.filtered(filter, ...processedArgs);
-    }
-
-    if (limit !== undefined && limit > 0) {
-      return results.slice(0, limit);
     }
 
     return results;
@@ -48,8 +43,10 @@ export class QueryExecutor {
     const startTime = Date.now();
     const realm = this.session.getRealmOrThrow();
 
-    const results = this.getFilteredResults(realm, objectType, filter, args, limit);
-    const totalCount = results.length;
+    const results = this.getFilteredResults(realm, objectType, filter, args);
+    const rawCount = results.length;
+    // Apply limit without materializing a copy — just clamp indices
+    const totalCount = (limit !== undefined && limit > 0) ? Math.min(rawCount, limit) : rawCount;
     const startIndex = (page - 1) * pageSize;
     const endIndex = Math.min(startIndex + pageSize, totalCount);
 

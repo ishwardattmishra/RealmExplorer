@@ -13,25 +13,25 @@ export class RecentFilesProvider implements vscode.TreeDataProvider<RecentFileIt
   // ── Public API ────────────────────────────────────────────────────────────
 
   /** Call this after a file is successfully opened. */
-  push(filePath: string): void {
+  async push(filePath: string): Promise<void> {
     const history = this.getHistory();
     const deduped = history.filter((p) => p !== filePath);
     deduped.unshift(filePath);
     const trimmed = deduped.slice(0, MAX_HISTORY);
-    this.globalState.update(STORAGE_KEY, trimmed);
+    await this.globalState.update(STORAGE_KEY, trimmed);
     this._onDidChangeTreeData.fire();
   }
 
   /** Remove a single entry from history. */
-  remove(filePath: string): void {
+  async remove(filePath: string): Promise<void> {
     const history = this.getHistory().filter((p) => p !== filePath);
-    this.globalState.update(STORAGE_KEY, history);
+    await this.globalState.update(STORAGE_KEY, history);
     this._onDidChangeTreeData.fire();
   }
 
   /** Wipe the whole history. */
-  clear(): void {
-    this.globalState.update(STORAGE_KEY, []);
+  async clear(): Promise<void> {
+    await this.globalState.update(STORAGE_KEY, []);
     this._onDidChangeTreeData.fire();
   }
 

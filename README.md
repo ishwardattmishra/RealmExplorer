@@ -4,13 +4,13 @@ Inspect and query local Realm database files directly within VS Code with a powe
 
 ## Features
 
-### 🗂️ Schema Explorer
+### Schema Explorer
 
 - View all object types in your Realm database
 - Expand object types to see their properties and types
 - Quick refresh to reload schema changes
 
-### 🔍 Advanced Query Interface
+### Advanced Query Interface
 
 - **Visual Filter Builder**: Create filters using a user-friendly interface
   - Multiple filter conditions with AND/OR logic
@@ -19,14 +19,21 @@ Inspect and query local Realm database files directly within VS Code with a powe
 - **Raw RQL Mode**: Write Realm Query Language queries directly for advanced filtering
 - **Tabbed Interface**: Switch between visual and RQL modes seamlessly
 
-### 📊 Query Execution
+### Query Execution
 
 - **Run Query**: Execute queries and view paginated results
 - **Count Only**: Get record counts without fetching data (faster for large datasets)
 - **Smart Pagination**: Navigate through large result sets with page controls
 - **Configurable Page Size**: Choose between 20, 50, 100, or 500 records per page
 
-### 📈 Results Display
+### Data Editing & Batch Updates
+
+- **Always Editable**: Double-click any cell to edit data inline without needing to toggle an edit mode.
+- **Batch Commits**: Edits are queued locally as pending changes. Apply or discard multiple changes simultaneously via the Pending Updates bar.
+- **Add / Delete Rows**: Add new records using a dedicated modal with auto-generate capabilities for IDs/Dates, and delete rows directly from the table.
+- **Visual Feedback**: Real-time visual indicators for pending changes and successful saves.
+
+### Results Display
 
 - **Sortable Columns**: Click column headers to sort results ascending/descending
 - **Rich Table View**: Clean, responsive table with proper VSCode theme integration
@@ -34,13 +41,13 @@ Inspect and query local Realm database files directly within VS Code with a powe
 - **Null Handling**: Clear indication of null values
 - **Performance Metrics**: View execution time and record counts
 
-### 💾 Data Export
+### Data Export
 
 - Export query results to JSON files
 - Includes all fetched records with proper formatting
 - Timestamped filenames for easy organization
 
-### 🎨 Modern UI
+### Modern UI
 
 - Native VSCode theme integration (dark/light mode support)
 - Responsive design that adapts to different panel sizes
@@ -67,21 +74,21 @@ Inspect and query local Realm database files directly within VS Code with a powe
 3. Select an operator (equals, contains, greater than, etc.)
 4. Enter a value
 5. Click "+ Add" to add more conditions with AND/OR logic
-6. Click "▶ Run Query" to execute
+6. Click "Run Query" to execute
 
 ### Raw RQL Mode
 
 1. Select the "Raw RQL" tab
 2. Write your filter expression (e.g., `age > 20 AND name BEGINSWITH 'J'`)
-3. Click "▶ Run Query" to execute
+3. Click "Run Query" to execute
 
 ![alt text](image.png)
 
 ### Additional Features
 
-- **# Count Only**: Get quick count without fetching data
+- **Count Only**: Get quick count without fetching data
 - **Clear Results**: Reset the results view
-- **📥 Export JSON**: Save results to a JSON file
+- **Export JSON**: Save results to a JSON file
 - **Pagination Controls**: Navigate with Previous/Next buttons or jump to a specific page
 - **Sort Results**: Click any column header to sort
 
@@ -117,7 +124,6 @@ Inspect and query local Realm database files directly within VS Code with a powe
 - Server-side sorting
 - Export all matching records (not just current page)
 - Query history and saved queries
-- Data editing capabilities
 - Schema comparison between Realm files
 
 ## Keyboard Shortcuts
@@ -126,8 +132,8 @@ Inspect and query local Realm database files directly within VS Code with a powe
 
 ## Support
 
-For issues, feature requests, or contributions, please visit the [GitHub repository](#).
+For issues, feature requests, or contributions, please visit the GitHub repository.
 
 ---
 
-**Enjoy exploring your Realm databases!** 🗄️✨
+**Enjoy exploring your Realm databases!**
