@@ -8,7 +8,6 @@ import { RealmBackend } from './services/realm-backend';
 import { RealmSchemaProvider } from './providers/SchemaProvider';
 import { RecentFilesProvider } from './providers/RecentFilesProvider';
 import { RealmPanel } from './webview/RealmPanel';
-import { RealmInstaller } from './services/realm-installer';
 
 let activeRealmBackend: RealmBackend | undefined;
 
@@ -20,27 +19,12 @@ export async function activate(context: vscode.ExtensionContext) {
   let schemaProvider: RealmSchemaProvider | undefined;
   const recentFilesProvider = new RecentFilesProvider(context.globalState);
 
-  // Try to initialize Realm backend - may fail if native module missing
+  // Try to initialize Realm backend
   try {
-    // Ensure realm native module is available for this platform
-    const realmAvailable = await RealmInstaller.ensureRealmInstalled(context);
-    
-    if (!realmAvailable) {
-      Logger.warn('Realm module not available - extension functionality will be limited');
-      void vscode.window.showWarningMessage(
-        'Realm Explorer: Native module not available for your platform. Commands will be registered but may not work.',
-        'Show Logs'
-      ).then(action => {
-        if (action === 'Show Logs') {
-          Logger.showOutput();
-        }
-      });
-    } else {
-      Logger.info('Realm module ready');
-    }
-
     realmBackend = new RealmBackend();
     activeRealmBackend = realmBackend;
+    Logger.info('Realm module ready');
+
     schemaProvider = new RealmSchemaProvider(realmBackend);
 
     context.subscriptions.push(vscode.window.registerTreeDataProvider('realm-schema', schemaProvider));
@@ -76,7 +60,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('realm.openFile', async (uri?: vscode.Uri) => {
       let filePath: string | undefined;
 
-      if (uri) {
+      if (uri && typeof uri.fsPath === 'string') {
         filePath = uri.fsPath;
       } else {
         const uris = await vscode.window.showOpenDialog({
@@ -124,7 +108,8 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage('Please open a Realm file first.');
         return;
       }
-      RealmPanel.createOrShow(context.extensionUri, realmBackend, objectType, undefined, onRealmClosed);
+      const targetObjectType = typeof objectType === 'string' ? objectType : undefined;
+      RealmPanel.createOrShow(context.extensionUri, realmBackend, targetObjectType, undefined, onRealmClosed);
     }),
 
     vscode.commands.registerCommand('realm.showLogs', async () => {

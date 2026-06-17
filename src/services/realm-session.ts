@@ -1,4 +1,4 @@
-import { Realm } from 'realm';
+import Realm from 'realm';
 
 /**
  * Owns Realm open/close lifecycle and the active Realm instance.
