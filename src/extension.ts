@@ -69,6 +69,7 @@ export async function activate(context: vscode.ExtensionContext) {
           canSelectMany: false,
           filters: {
             'Realm Files': ['realm'],
+            'All Files': ['*'],
           },
         });
         if (uris && uris.length > 0) {
