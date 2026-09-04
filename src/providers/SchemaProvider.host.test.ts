@@ -25,14 +25,19 @@ vi.mock('vscode', () => {
     }
   }
 
+  class ThemeIcon {
+    constructor(public readonly id: string) {}
+  }
+
   return {
     TreeItemCollapsibleState: { None: 0, Collapsed: 1, Expanded: 2 },
     EventEmitter,
     TreeItem,
+    ThemeIcon,
   };
 });
 
-import { RealmSchemaProvider } from './SchemaProvider';
+import { RealmSchemaProvider, DropHintItem } from './SchemaProvider';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,9 +57,12 @@ function makeBackend(overrides: Partial<{
 // ── RealmSchemaProvider ───────────────────────────────────────────────────────
 
 describe('RealmSchemaProvider', () => {
-  it('returns no children when realm is not open', async () => {
+  it('returns a drop hint when realm is not open', async () => {
     const provider = new RealmSchemaProvider(makeBackend({ isOpen: () => false }) as never);
-    await expect(provider.getChildren()).resolves.toEqual([]);
+    const children = await provider.getChildren();
+    expect(children).toHaveLength(1);
+    expect(children[0]).toBeInstanceOf(DropHintItem);
+    expect(children[0].label).toBe('Drop a .realm file here to open');
   });
 
   it('lists object types at root when realm is open', async () => {

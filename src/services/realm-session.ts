@@ -6,12 +6,20 @@ import Realm from 'realm';
 export class RealmSession {
   private realm: Realm | null = null;
 
-  async open(filePath: string, readOnly: boolean): Promise<void> {
+  async open(filePath: string, readOnly: boolean, encryptionKey?: ArrayBuffer): Promise<void> {
     this.close();
-    this.realm = await Realm.open({
+    const RealmModule = (Realm as any).default || Realm;
+    
+    const config: Realm.Configuration = {
       path: filePath,
       readOnly,
-    });
+    };
+    
+    if (encryptionKey) {
+      config.encryptionKey = new Uint8Array(encryptionKey);
+    }
+    
+    this.realm = await RealmModule.open(config);
   }
 
   getRealmOrThrow(): Realm {

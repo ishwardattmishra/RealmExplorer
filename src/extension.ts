@@ -7,9 +7,43 @@ import { Logger } from './services/logger';
 import { RealmBackend } from './services/realm-backend';
 import { RealmSchemaProvider } from './providers/SchemaProvider';
 import { RecentFilesProvider } from './providers/RecentFilesProvider';
+import { RealmDragAndDropController } from './providers/RealmDragAndDropController';
 import { RealmPanel } from './webview/RealmPanel';
 
 let activeRealmBackend: RealmBackend | undefined;
+
+/**
+ * Converts a hex or base64 string to ArrayBuffer for Realm encryption key.
+ * Realm requires 64-byte (512-bit) encryption keys.
+ */
+function parseEncryptionKey(input: string): ArrayBuffer | null {
+  // Try hex format (128 hex chars = 64 bytes)
+  if (/^[0-9a-fA-F]{128}$/.test(input)) {
+    const bytes = new Uint8Array(64);
+    for (let i = 0; i < 64; i++) {
+      bytes[i] = parseInt(input.substr(i * 2, 2), 16);
+    }
+    return bytes.buffer;
+  }
+  
+  // Try base64 format
+  try {
+    const base64 = input.replace(/[^A-Za-z0-9+/=]/g, '');
+    const binary = Buffer.from(base64, 'base64');
+    if (binary.length === 64) {
+      // Create a new Uint8Array and copy the buffer data
+      const bytes = new Uint8Array(64);
+      for (let i = 0; i < 64; i++) {
+        bytes[i] = binary[i];
+      }
+      return bytes.buffer;
+    }
+  } catch (e) {
+    // Fall through to null
+  }
+  
+  return null;
+}
 
 export async function activate(context: vscode.ExtensionContext) {
   Logger.initialize(context);
@@ -18,6 +52,7 @@ export async function activate(context: vscode.ExtensionContext) {
   let realmBackend: RealmBackend | undefined;
   let schemaProvider: RealmSchemaProvider | undefined;
   const recentFilesProvider = new RecentFilesProvider(context.globalState);
+  const dndController = new RealmDragAndDropController();
 
   // Try to initialize Realm backend
   try {
@@ -27,8 +62,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
     schemaProvider = new RealmSchemaProvider(realmBackend);
 
-    context.subscriptions.push(vscode.window.registerTreeDataProvider('realm-schema', schemaProvider));
-    context.subscriptions.push(vscode.window.registerTreeDataProvider('realm-recent', recentFilesProvider));
+    const schemaTreeView = vscode.window.createTreeView('realm-schema', {
+      treeDataProvider: schemaProvider,
+      dragAndDropController: dndController,
+      showCollapseAll: true,
+    });
+
+    const recentTreeView = vscode.window.createTreeView('realm-recent', {
+      treeDataProvider: recentFilesProvider,
+      dragAndDropController: dndController,
+      showCollapseAll: true,
+    });
+
+    context.subscriptions.push(schemaTreeView, recentTreeView);
 
     context.subscriptions.push({
       dispose: () => {
@@ -82,6 +128,8 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showErrorMessage('Realm Explorer: Backend not initialized. Realm module may be missing.');
           return;
         }
+        
+        // Try opening without encryption first
         try {
           await realmBackend.openRealm(filePath, false);
           recentFilesProvider.push(filePath);
@@ -90,7 +138,47 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showInformationMessage(`Opened Realm: ${path.basename(filePath)}`);
           vscode.commands.executeCommand('realm.runQuery');
         } catch (err) {
-          vscode.window.showErrorMessage(`Failed to open Realm: ${toErrorMessage(err)}`);
+          const errMsg = toErrorMessage(err);
+          
+          // Check if error is encryption-related
+          const isEncryptionError = errMsg.toLowerCase().includes('encrypt') || 
+                                   errMsg.toLowerCase().includes('decrypt') ||
+                                   errMsg.toLowerCase().includes('invalid key');
+          
+          if (isEncryptionError) {
+            // Prompt for encryption key
+            const keyInput = await vscode.window.showInputBox({
+              prompt: 'This Realm file appears to be encrypted. Enter the encryption key (64 bytes as hex or base64)',
+              password: true,
+              ignoreFocusOut: true,
+              placeHolder: '128 hex characters or base64 string',
+            });
+            
+            if (keyInput) {
+              const encryptionKey = parseEncryptionKey(keyInput);
+              
+              if (!encryptionKey) {
+                vscode.window.showErrorMessage(
+                  'Invalid encryption key format. Expected 64 bytes as 128 hex characters or base64 string.'
+                );
+                return;
+              }
+              
+              // Try opening with encryption key
+              try {
+                await realmBackend.openRealm(filePath, false, encryptionKey);
+                recentFilesProvider.push(filePath);
+                schemaProvider?.refresh();
+                await vscode.commands.executeCommand('setContext', 'realm.isOpen', true);
+                vscode.window.showInformationMessage(`Opened encrypted Realm: ${path.basename(filePath)}`);
+                vscode.commands.executeCommand('realm.runQuery');
+              } catch (keyErr) {
+                vscode.window.showErrorMessage(`Failed to open Realm with provided key: ${toErrorMessage(keyErr)}`);
+              }
+            }
+          } else {
+            vscode.window.showErrorMessage(`Failed to open Realm: ${errMsg}`);
+          }
         }
       }
     }),

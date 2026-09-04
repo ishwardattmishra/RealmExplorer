@@ -18,6 +18,8 @@ export class RealmBackend implements IRealmBackend {
   private readonly queryExecutor: QueryExecutor;
   /** Last opened file path, needed for reopenRealm */
   private currentFilePath: string | undefined;
+  /** Encryption key for the current file (stored for reopen) */
+  private currentEncryptionKey: ArrayBuffer | undefined;
   /** Cached schema to avoid re-reading on every getSchema() / CRUD call */
   private cachedSchema: RealmSchemaInfo[] | undefined;
 
@@ -26,12 +28,13 @@ export class RealmBackend implements IRealmBackend {
     this.queryExecutor = new QueryExecutor(this.session, this.typeCoercer, this.logger);
   }
 
-  async openRealm(filePath: string, readOnly = true): Promise<RealmSchemaInfo[]> {
-    this.logger.info(`Opening Realm: ${filePath} (readOnly: ${readOnly})`);
+  async openRealm(filePath: string, readOnly = true, encryptionKey?: ArrayBuffer): Promise<RealmSchemaInfo[]> {
+    this.logger.info(`Opening Realm: ${filePath} (readOnly: ${readOnly}, encrypted: ${!!encryptionKey})`);
     try {
       this.logger.info('Calling Realm.open...');
-      await this.session.open(filePath, readOnly);
+      await this.session.open(filePath, readOnly, encryptionKey);
       this.currentFilePath = filePath;
+      this.currentEncryptionKey = encryptionKey;
       this.cachedSchema = undefined; // invalidate cache
       this.logger.info('Realm opened successfully');
 
@@ -49,7 +52,7 @@ export class RealmBackend implements IRealmBackend {
       throw new Error('No Realm file has been opened yet.');
     }
     this.logger.info(`Reopening Realm (writeable: ${writeable})`);
-    return this.openRealm(this.currentFilePath, !writeable);
+    return this.openRealm(this.currentFilePath, !writeable, this.currentEncryptionKey);
   }
 
   getSchema(): RealmSchemaInfo[] {

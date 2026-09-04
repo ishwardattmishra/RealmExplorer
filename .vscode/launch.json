@@ -12,6 +12,20 @@
                 "${workspaceFolder}/out/**/*.js"
             ],
             "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            "name": "Run Extension (Clean State)",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--user-data-dir=${workspaceFolder}/.vscode-test/clean-user-data",
+                "--extensions-dir=${workspaceFolder}/.vscode-test/clean-extensions"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js"
+            ],
+            "preLaunchTask": "${defaultBuildTask}"
         }
     ]
 }

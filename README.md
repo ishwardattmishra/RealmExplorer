@@ -50,6 +50,7 @@ Inspect and query local Realm database files directly within VS Code with a powe
 ### Modern UI
 
 - Native VSCode theme integration (dark/light mode support)
+- **Drag & Drop**: Drag `.realm` database files from VS Code Explorer or OS desktop directly into the side panel to open them
 - Responsive design that adapts to different panel sizes
 - Loading states and error handling
 - Status bar with real-time query statistics
@@ -58,8 +59,14 @@ Inspect and query local Realm database files directly within VS Code with a powe
 ## Usage
 
 1. Click on the **Realm** icon in the Activity Bar (sidebar)
-2. Click the **Open Realm File** button (folder icon) in the Schema Explorer title bar
-3. Select a `.realm` file from your workspace
+2. Open a `.realm` file:
+   - **Drag and Drop**: Drag a `.realm` file from VS Code File Explorer or your desktop into the side panel
+   - **File Picker**: Click the **Open Realm File** button (folder icon) in the Schema Explorer title bar
+3. **Encrypted Files**: If the Realm file is encrypted, you will be prompted to enter the encryption key
+   - Enter the 64-byte encryption key as either:
+     - 128 hexadecimal characters (e.g., `0123456789abcdef...`)
+     - Base64-encoded string
+   - The key is stored in memory and used for reopening the file (e.g., when switching between read-only and writable modes)
 4. Explore the schema:
    - Expand object types to view their properties
    - See property types and optionality

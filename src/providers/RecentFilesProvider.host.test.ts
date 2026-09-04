@@ -40,7 +40,7 @@ vi.mock('vscode', () => {
   };
 });
 
-import { RecentFileItem, RecentFilesProvider } from './RecentFilesProvider';
+import { RecentFileItem, RecentFilesProvider, DropHintItem } from './RecentFilesProvider';
 
 // ── fake Memento ──────────────────────────────────────────────────────────────
 
@@ -71,9 +71,11 @@ describe('RecentFilesProvider', () => {
     provider = new RecentFilesProvider(memento);
   });
 
-  it('starts with an empty history', () => {
+  it('starts with an empty history and shows drop hint', () => {
     expect(provider.getHistory()).toEqual([]);
-    expect(provider.getChildren()).toEqual([]);
+    const children = provider.getChildren();
+    expect(children).toHaveLength(1);
+    expect(children[0]).toBeInstanceOf(DropHintItem);
   });
 
   it('push() adds a file to the front', async () => {
@@ -150,6 +152,14 @@ describe('RecentFilesProvider', () => {
     const children = provider.getChildren();
     expect(children).toHaveLength(1);
     expect(children[0]).toBeInstanceOf(RecentFileItem);
+  });
+
+  it('getChildren() returns DropHintItem when history is cleared', async () => {
+    await provider.push('/data/mydb.realm');
+    await provider.clear();
+    const children = provider.getChildren();
+    expect(children).toHaveLength(1);
+    expect(children[0]).toBeInstanceOf(DropHintItem);
   });
 
   it('persists history across provider instances (same memento)', async () => {

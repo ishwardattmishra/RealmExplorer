@@ -38,6 +38,7 @@ export class TypeCoercer {
   }
 
   private registerDefaults(): void {
+    const RealmModule = (Realm as any).default || Realm;
     this.register('date', (val) => {
       const d = new Date(String(val));
       if (Number.isNaN(d.getTime())) {
@@ -45,9 +46,9 @@ export class TypeCoercer {
       }
       return d;
     });
-    this.register('objectid', (val) => new Realm.BSON.ObjectId(val as string | Realm.BSON.ObjectId));
-    this.register('uuid', (val) => new Realm.BSON.UUID(val as string | Realm.BSON.UUID));
-    this.register('decimal128', (val) => Realm.BSON.Decimal128.fromString(String(val)));
+    this.register('objectid', (val) => new RealmModule.BSON.ObjectId(val as string | any));
+    this.register('uuid', (val) => new RealmModule.BSON.UUID(val as string | any));
+    this.register('decimal128', (val) => RealmModule.BSON.Decimal128.fromString(String(val)));
   }
 
   coerceArg(arg: unknown): unknown {

@@ -100,11 +100,11 @@
     "viewsWelcome": [
       {
         "view": "realm-schema",
-        "contents": "No Realm database open.\n[Open Realm File](command:realm.openFile)\nOpen a .realm file to explore its schema and query data."
+        "contents": "No Realm database open.\n[Open Realm File](command:realm.openFile)\nDrag and drop a .realm file here to open it."
       },
       {
         "view": "realm-recent",
-        "contents": "No recently opened files.\n[Open Realm File](command:realm.openFile)"
+        "contents": "No recently opened files.\n[Open Realm File](command:realm.openFile)\nDrag and drop a .realm file here to open it."
       }
     ],
     "menus": {
