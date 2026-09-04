@@ -1,7 +1,7 @@
 import type { QueryResult, RealmSchemaInfo } from '../shared/types';
 
 export interface IRealmBackend {
-  openRealm(filePath: string, readOnly?: boolean): Promise<RealmSchemaInfo[]>;
+  openRealm(filePath: string, readOnly?: boolean, encryptionKey?: ArrayBuffer): Promise<RealmSchemaInfo[]>;
   reopenRealm(writeable: boolean): Promise<RealmSchemaInfo[]>;
   getSchema(): RealmSchemaInfo[];
   executeQuery(

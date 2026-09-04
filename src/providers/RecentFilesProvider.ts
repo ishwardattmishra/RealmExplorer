@@ -4,8 +4,8 @@ import * as vscode from 'vscode';
 const STORAGE_KEY = 'realm.recentFiles';
 const MAX_HISTORY = 10;
 
-export class RecentFilesProvider implements vscode.TreeDataProvider<RecentFileItem> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<RecentFileItem | undefined | void>();
+export class RecentFilesProvider implements vscode.TreeDataProvider<RecentFileItem | DropHintItem> {
+  private _onDidChangeTreeData = new vscode.EventEmitter<RecentFileItem | DropHintItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   constructor(private readonly globalState: vscode.Memento) {}
@@ -41,12 +41,17 @@ export class RecentFilesProvider implements vscode.TreeDataProvider<RecentFileIt
 
   // ── TreeDataProvider ──────────────────────────────────────────────────────
 
-  getTreeItem(element: RecentFileItem): vscode.TreeItem {
+  getTreeItem(element: RecentFileItem | DropHintItem): vscode.TreeItem {
     return element;
   }
 
-  getChildren(): RecentFileItem[] {
-    return this.getHistory().map((filePath) => new RecentFileItem(filePath));
+  getChildren(): (RecentFileItem | DropHintItem)[] {
+    const history = this.getHistory();
+    if (history.length === 0) {
+      // Return a placeholder so the tree is never empty — required for drag-and-drop
+      return [new DropHintItem()];
+    }
+    return history.map((filePath) => new RecentFileItem(filePath));
   }
 }
 
@@ -66,3 +71,20 @@ export class RecentFileItem extends vscode.TreeItem {
     };
   }
 }
+
+/**
+ * Placeholder that keeps the tree non-empty so drag-and-drop has a
+ * valid drop target even before any files have been opened.
+ */
+export class DropHintItem extends vscode.TreeItem {
+  constructor() {
+    super('Drop a .realm file here to open', vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon('inbox');
+    this.contextValue = 'dropHint';
+    this.command = {
+      command: 'realm.openFile',
+      title: 'Open Realm File',
+    };
+  }
+}
+
