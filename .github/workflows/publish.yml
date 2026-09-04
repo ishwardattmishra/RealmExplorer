@@ -68,14 +68,14 @@ jobs:
       # Do NOT pass --no-dependencies: vsce then skips npm dependency paths and never collects
       # files under node_modules/ (glob uses ignore: node_modules/** on cwd only). Realm must
       # be included via npm list + .vscodeignore (!node_modules/realm/...).
-      - name: Publish to Marketplace
-        shell: bash
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npx @vscode/vsce publish --target "${{ matrix.target }}"
+      # - name: Publish to Marketplace
+      #   shell: bash
+      #   env:
+      #     VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      #   run: npx @vscode/vsce publish --target "${{ matrix.target }}"
 
-      # package.json publisher stays IshwarDattMishra for VS Marketplace (vsce above).
-      # Open VSX uses a separate namespace (default ishwardattmishra); override with repo variable OPEN_VSX_PUBLISHER.
+      # # package.json publisher stays IshwarDattMishra for VS Marketplace (vsce above).
+      # # Open VSX uses a separate namespace (default ishwardattmishra); override with repo variable OPEN_VSX_PUBLISHER.
       - name: Publish to Open VSX
         shell: bash
         env:
