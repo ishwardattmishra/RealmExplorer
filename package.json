@@ -2,7 +2,7 @@
   "name": "realm-vscode",
   "displayName": "Realm Explorer",
   "description": "Inspect and query local Realm database files directly in VS Code with advanced filtering and visualization.",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "icon": "media/logo.png",
   "publisher": "IshwarDattMishra",
   "repository": {
@@ -195,7 +195,7 @@
     "terser": "^5.46.2",
     "typescript": "^5.1.6",
     "vite": "^8.0.10",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "realm": "^20.2.0"
